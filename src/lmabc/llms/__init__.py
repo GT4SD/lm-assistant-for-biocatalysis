@@ -26,14 +26,13 @@ SOFTWARE.
 
 from typing import Any, Dict, Optional, Union
 
-from genai.extensions.langchain import LangChainChatInterface
 from langchain.chat_models.base import BaseChatModel
 from langchain_core.language_models.llms import BaseLLM
 
 
 def create_llm(
     model: str, provider: str, model_kwargs: Optional[Dict[str, Any]] = None
-) -> Union[BaseChatModel, LangChainChatInterface, BaseLLM]:
+) -> Union[BaseChatModel, BaseLLM]:
     """
     Create and configure a language model interface based on the provider.
 

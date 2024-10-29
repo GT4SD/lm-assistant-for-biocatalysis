@@ -96,8 +96,8 @@ To use all the supported tools, install the following on your system:
    Create a `.env` file in the project root and add your configuration:
 
    ```env
-   KEY=your_genai_key_here
-   API=your_genai_api_here
+   KEY=your_key_here
+   API=your_api_here
    ```
 
    > **Note**: Ensure that `.env` is added to `.gitignore` to protect sensitive information.
