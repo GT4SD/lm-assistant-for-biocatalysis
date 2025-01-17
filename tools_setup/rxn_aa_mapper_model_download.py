@@ -1,18 +1,18 @@
 """Model setup for RXNAAMapper"""
 
-import logging
 
-from lmabc.configuration import BIOCATALYSIS_AGENT_CONFIGURATION
+import logging
+from pathlib import Path
+
+import click
 from rxn_aa_mapper.model import EnzymaticReactionLightningModule
 from rxn_aa_mapper.tokenization import LMEnzymaticReactionTokenizer
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-
-def download_bert_model():
+def download_bert_model(cache_dir):
     """Download and save the BERT model to the cache directory."""
-    cache_dir = BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("rxnaamapper")
     model_path = cache_dir / "model"
 
     if not model_path.exists():
@@ -34,7 +34,13 @@ def download_bert_model():
     else:
         logger.info(f"Model already exists at {model_path}")
 
+@click.command()
+@click.argument('cache_dir', type=click.Path(exists=True))
+def main(cache_dir):
+    """Main function to set up the model using a provided configuration."""
+    
+    download_bert_model(Path(cache_dir))
+    logger.info("Model setup completed successfully!")
 
 if __name__ == "__main__":
-    download_bert_model()
-    logger.info("Model setup completed successfully!")
+    main()

@@ -117,7 +117,6 @@ Functionality:
 - Optimizes protein sequences based on given substrate and product SMILES representations
 - Uses either a feasibility scorer or a kcat (turnover number) scorer for optimization
 - Applies a sequence of mutations and crossovers to generate optimized enzyme variants
-- Supports both synchronous and asynchronous execution
 
 Key Parameters:
 1. substrate_smiles (str, required): SMILES representation of the substrate molecule
@@ -148,6 +147,10 @@ Usage Notes:
 - When specifying intervals, use a list of [start, end] pairs, e.g., [[0, 50], [100, 150]] to focus on residues 1-50 and 101-150
 - Adjust num_iterations, num_sequences, and num_mutations to balance between exploration and computation time
 - The time_budget parameter can be used to limit long-running optimizations
+- When first running optimization, store all information (sequences and scores). Keep sequence-score associations exactly as provided
+- For follow-up questions about the same optimization results, use the stored information instead of rerunning the tool
+- NEVER modify, round, or make up scores - use exactly what's in the results
+- Only rerun optimization if new parameters or sequences are requested
 
 Output:
 The tool returns a dictionary containing the best sequences and their score, ranked by their predicted performance for the given substrate-product pair.
@@ -315,29 +318,44 @@ class OptimizeEnzymeSequences(BiocatalysisAssistantBaseTool):
     ) -> str:
         """
         Run enzyme sequence optimization.
-
+        
         Args:
             substrate_smiles: SMILES string of the substrate.
             product_smiles: SMILES string of the product.
             protein_sequence: Amino acid sequence of the protein.
             scorer_type: Type of scorer to use (default: "feasibility").
-            intervals: List of intervals for mutation (default: None).
+            intervals: List of intervals for mutation (default: []).
             number_of_results: Number of results to return (default: 10).
-
+            
         Returns:
-            List of dictionaries containing optimized sequences.
+            A formatted string containing the optimization results.
+        
+        Raises:
+            ValueError: If input validation fails or optimization fails.
         """
+        if not substrate_smiles or not product_smiles or not protein_sequence:
+            return "Error: Missing required input parameters. Please provide substrate_smiles, product_smiles, and protein_sequence."
+            
+        if scorer_type not in ["feasibility", "kcat"]:
+            return f"Error: Invalid scorer_type '{scorer_type}'. Must be either 'feasibility' or 'kcat'."
+            
+        if number_of_results is None or number_of_results < 1:
+            number_of_results = 10
+            
         try:
+            if not protein_sequence.isalpha():
+                return "Error: Invalid protein sequence. Must contain only amino acid letters."
+                
             config = ENZEPTIONAL_SETTINGS.model_copy(update=kwargs)
-
-            use_xgboost_scorer = False
-            if scorer_type == "kcat":
-                use_xgboost_scorer = True
-            logger.info(f"using {scorer_type} scorer")
-
+            use_xgboost_scorer = scorer_type == "kcat"
             scorer_path, scaler_path = self._get_model_paths(scorer_type)
-
-            intervals = intervals or [[0, len(protein_sequence)]]
+            
+            if not intervals:
+                intervals = [[0, len(protein_sequence)]]
+            else:
+                for start, end in intervals:
+                    if start < 0 or end > len(protein_sequence) or start >= end:
+                        return f"Error: Invalid interval [{start}, {end}]. Must be within sequence length (0-{len(protein_sequence)})."
 
             optimizer = OptimizerFactory.create_optimizer(
                 protein_sequence,
@@ -360,17 +378,40 @@ class OptimizeEnzymeSequences(BiocatalysisAssistantBaseTool):
                 d for d in optimized_sequences if d["sequence"] != protein_sequence
             ]
 
+            optimized_sequences = list({
+                seq["sequence"]: seq
+                for seq in optimized_sequences
+            }.values())
+
+
+            if not optimized_sequences:
+                return "No improved sequences found."
+
             filename: Path = config.tool_dir / "output" / config.output_filename
             self._save_results(results=optimized_sequences, filename=filename)
 
             df = pd.read_json(f"{filename}", orient="records", lines=True).head(
                 number_of_results
             )
-            return df.to_dict("records")
+            
+            sequences_info = []
+            for idx, row in enumerate(df.to_dict('records'), 1):
+                sequences_info.append(
+                    f"Sequence {idx}:\n"
+                    f"Score: {row['score']:.4f}\n"
+                    f"Sequence: {row['sequence']}"
+                )
+                
+            result = (
+                f"Found {len(sequences_info)} optimized sequences.\n\n" +
+                "\n\n".join(sequences_info)
+            )
+            
+            return result
 
         except Exception as e:
             logger.error(f"Error in OptimizeEnzymeSequences: {e}")
-            raise ValueError(f"Failed to optimize enzyme sequences: {str(e)}")
+            return f"Error during optimization: {str(e)}"
 
     def _get_model_paths(
         self, scorer_type: str = "feasibility"

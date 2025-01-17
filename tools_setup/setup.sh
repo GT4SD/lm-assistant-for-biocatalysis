@@ -38,8 +38,8 @@ echo "Moving tokenizer and vocabulary files..."
 mv "$TEMP_DIR/examples/token_75K_min_600_max_750_500K.json" "$RXNAAMAPPER_CACHE_DIR/tokenizer.json"
 mv "$TEMP_DIR/examples/vocabulary_token_75K_min_600_max_750_500K.txt" "$RXNAAMAPPER_CACHE_DIR/vocabulary.txt"
 
-echo "Running Python setup script..."
-python tools_setup/rxn_aa_mapper_model_download.py
+echo "Running rxnaamapper setup script..."
+python tools_setup/rxn_aa_mapper_model_download.py "$RXNAAMAPPER_CACHE_DIR"
 
 echo "Cleaning up temporary directory..."
 rm -rf "$TEMP_DIR"

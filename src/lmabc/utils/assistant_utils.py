@@ -25,8 +25,6 @@ SOFTWARE.
 """
 
 
-import json
-import re
 from typing import Union
 
 from langchain.agents import AgentExecutor
@@ -34,7 +32,6 @@ from langchain.agents.format_scratchpad import format_log_to_str
 from langchain.agents.output_parsers import JSONAgentOutputParser
 from langchain.chat_models.base import BaseChatModel
 from langchain.memory import ConversationBufferMemory
-from langchain.schema import AgentAction, AgentFinish
 from langchain.tools.render import render_text_description_and_args
 from langchain_core.language_models.llms import BaseLLM
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -42,169 +39,89 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_core.tools import BaseTool
 
 
-class CustomJSONAssistantOutputParser(JSONAgentOutputParser):
-    """Custom json parser to process the LLMs outputs."""
-
-    def _extract_clean_json(self, text: str) -> str:
-        """
-        Extract a clean json from the LLM output text.
-        Args:
-            text: The text output from the LLM.
-        Returns:
-            Cleaned string.
-        """
-        text = text.strip()
-
-        pattern = r"(?:```json\s*|\s*json\s*|\s*```\s*)"
-        text = re.sub(pattern, "", text)
-
-        text = text.replace("```", "").strip()
-
-        return text
-
-    def parse(self, text: str) -> AgentAction | AgentFinish:
-        """
-        Parse the LLM output text.
-        Args:
-            text: The text output from the LLM.
-        Returns:
-            Serializable object based on the parsed output.
-        """
-        try:
-            cleaned_text = self._extract_clean_json(text)
-            parsed = json.loads(cleaned_text)
-
-            if (
-                parsed.get("action") == "Final Answer"
-                or parsed.get("action") == "response"
-            ):
-                action_input = parsed.get("action_input")
-                if isinstance(action_input, (dict, list)):
-                    formatted_output = json.dumps(action_input, indent=2)
-                else:
-                    formatted_output = str(action_input)
-
-                return AgentFinish(return_values={"output": formatted_output}, log=text)
-
-            return AgentAction(
-                tool=str(parsed.get("action", "")),
-                tool_input=parsed.get("action_input", ""),
-                log=text,
-            )
-
-        except json.JSONDecodeError:
-            return AgentFinish(return_values={"output": text}, log=text)
-
-
 def create_agent(
     tools: list[BaseTool],
     llm: Union[BaseChatModel, BaseLLM],
     use_memory: bool = True,
-):
-    """
-    Create and configure an agent with the provided tools and language model interface.
+) -> AgentExecutor:
+    """Create an agent executor.
 
     Args:
-        tools: List of BaseTool objects to be used by the agent.
-        llm: Language model interface (either BaseChatModel or BaseLLM).
-        use_memory: Boolean indicating whether to use conversation memory (default: True).
+        tools: list of tools for the agent.
+        llm: a langchain base chat model.
 
     Returns:
-        AgentExecutor object configured with the specified tools, language model, and memory.
+        an agent executor.
     """
-    system_prompt = """
-You are an AI assistant specializing in biocatalysis, computational biology, and molecular dynamics. Your task is to respond to questions or solve problems using the following tools: {tools} with names {tool_names}.
 
-Only respond as the AI assistant. Never generate or simulate human messages or questions. Provide direct answers to the actual human input. Do not create hypothetical dialogue or conversation. Focus solely on the specific task or question asked.
-
-Always provide the action in a single JSON blob, one JSON blob at a time unless strictly needed to reply with multiple. Do not anticipate the user/human questions or tasks.
-
-Here is an example of valid JSON blob (do not include additional text or title outside of the JSON blob):
-```json
-{{
- "action": "Tool Name or Final Answer",
- "action_input": "Input for the tool or your final answer"
-}}
-```
-
-Instructions:
-1. Analyze the user's input carefully. Clearly restate the user's question or problem.
-
-2. If you can answer directly without tools, provide a Final Answer immediately. Keep in mind that generic questions on reactions or biocatalyzed reactions can be directly answered with Final Answer.
-
-3. If you need more information or are ready to give your final answer, ask the user directly in your Final Answer.
-
-4. When using tools, follow this format strictly:
-   Thought: Briefly explain your reasoning and check if you have all the necessary input for the next step; otherwise give immediately your Final Answer. The answer can be incomplete, that's fine.
-   
-   Then, provide the action in a single JSON blob:
-   ```json
+    system_prompt = """You are an intelligent assistant with access to tools that can help you answer various questions and perform tasks.
+    Respond to the human as helpfully and accurately as possible.
+    You want to use JSON BLOBS of single actions to reply to the human as well as possible.
+    Respond to the human as helpfully and accurately as possible. Here are the tools that you can use:
+    {tools}
+    Use a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).
+    Valid "action" values: "Final Answer" or {tool_names}
+    Provide only ONE action per $JSON_BLOB, as shown:
+    ```json
     {{
-    "action": "Tool Name or Final Answer",
-    "action_input": "Input for the tool or your final answer"
+        "action": $TOOL_NAME,
+        "action_input": $INPUT
     }}
     ```
+    Follow this format:
+    1. Question: input question to answer
+    2. Thought: consider previous and subsequent steps. Always think about what to do, do not use any tool if not needed.
+    3. Action:
+    ```json
+    {{
+        "action": "Final Answer",
+        "action_input": "Final response to human",
+    }}
+    ```
+    4: Output: action result.
 
-5. Use only one tool at a time.
+    Reminder:
+    - ALWAYS respond with a valid json blob of a single action. In JSON blobs use null instead of None and convert True and False to lowercase.
+    - NEVER ADD Observations or Commentary in Actions: Do not append 'Observation' or any other commentary at the end of your action block. The action block must contain only valid JSON.
+    - ALWAYS respond with a valid json blob of a single action.
+    - You MUST avoid fabricating information or creating fake data. If you cannot provide a response without additional input or tool usage, respond with:
+    ```json
+    {{
+        "action": "Final Answer",
+        "action_input": "I'm sorry, I cannot answer that question with the information available."
+    }}
+    ```
+    - If you receive an error or invalid response from a tool, do not retry with the same input
+    IMPORTANT GUIDELINES:
+    1. Each tool output must be evaluated before proceeding
+    2. If a tool returns an error or unexpected result, provide a Final Answer explaining the issue
+    3. After each tool use, either:
+        - Use a different tool if more information is needed
+        - Provide a Final Answer if you have sufficient information
+    4. For the OptimizeEnzymeSequences tool:
+        - When first running optimization, store all information (sequences and scores). Keep sequence-score associations exactly as provided
+        - For follow-up questions about the same optimization results, use the stored information instead of rerunning the tool
+        - NEVER modify, round, or make up scores - use exactly what's in the results
+        - Only rerun optimization if new parameters or sequences are requested
 
-6. Ensure data is correctly formatted between tool uses.
-
-7. Don't repeat tool execution unless inputs change.
-
-8. For PDB structures, always select the highest-scoring or first option.
-
-Valid "action" values: Final Answer or {tool_names}. Do not use action values that are not valid.
-
-Example of invalid JSON blob:
-```json
-{{
- "action": "Thought",
- "action_input": "Your thoughts"
-}}
-```
-
-or
-
-```json
-{{
- "response": "Thought",
- "action_input": "Your thoughts"
-}}
-```
-
-In this case, return "action_input" as Final Answer.
-
-Ensure that when a tool saves results in a file or returns data associated with a file or path, the full file path is included in the Final Answer, along with any relevant data or output from the tool.
-
-For tools like Blastp, DownloadPDBStructure, and others, it is important to return the path where the data have been saved. Also, return a brief description of the data when available.
-
-Remember:
-- Be concise and direct
-- Provide actionable and well-formatted information
-- Include all relevant results and observations
-- Always use the JSON blob format for valid actions, including Final Answer
-- Do not use Thought as an action
-
-Begin!
-"""
+    Begin!
+    """
 
     human_prompt = """{input}
     {agent_scratchpad}
-    (Reminder: Only respond in a valid JSON blob, "response" is not a valid JSON blob key. Any deviation will be flagged and ignored.)"""
+    (reminder to respond in a JSON blob no matter what)"""
 
-    memory = (
-        ConversationBufferMemory(memory_key="history", return_messages=True)
-        if use_memory
-        else None
-    )
+    memory =  ConversationBufferMemory(
+        memory_key="chat_history",
+        return_messages=True,
+        output_key="output"
+    ) if use_memory else None
 
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            ("system", system_prompt),
-            MessagesPlaceholder("chat_history", optional=True),
-            ("human", human_prompt),
-        ]
-    ).partial(
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", system_prompt),
+        MessagesPlaceholder("chat_history", optional=True),
+        ("human", human_prompt),
+    ]).partial(
         tools=render_text_description_and_args(list(tools)),
         tool_names=", ".join([t.name for t in tools]),
     )
@@ -220,7 +137,10 @@ Begin!
         )
         | prompt
         | llm
-        | CustomJSONAssistantOutputParser()
+        | JSONAgentOutputParser()
     )
 
-    return AgentExecutor(agent=agent, tools=tools, handle_parsing_errors=True, verbose=True, memory=memory, max_iterations=5)  # type: ignore[arg-type]
+    return AgentExecutor(
+        agent=agent, tools=tools, handle_parsing_errors=True, verbose=True, memory=memory, max_iterations=5,
+        early_stopping_method="force"
+    )

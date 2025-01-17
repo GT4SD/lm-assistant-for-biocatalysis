@@ -117,12 +117,3 @@ venv.bak/
 
 # Apple macOS
 .DS_Store
-
-# Blast logs
-src/blast_logs/
-
-# Submodules
-submodules/
-
-# Biocatalysis_tool
-.biocatalysis_tools/

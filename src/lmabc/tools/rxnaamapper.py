@@ -83,33 +83,8 @@ class ExtractBindingSites(BiocatalysisAssistantBaseTool):
     description: str = """This tool extracts binding sites from a given reaction SMILES string using RXNAAMapper.
     
     Input Format:
-        - Reaction SMILES must follow this structure: 'substrate SMILES | amino acid sequence >> product SMILES'
-        - Example:  'CC(=O)Cc1ccccc1|MTENALVR>>CC(O)Cc1ccccc1'}
-    
-    Purpose:
-        - Identifies amino acid residues in the protein sequence that are likely involved in substrate binding
-        - Uses attention-guided mapping to predict active site residues
-        - Analyzes protein-substrate interactions based on the reaction context
-    
-    Required Components:
-        1. Substrate SMILES: Chemical structure(s) that bind to the protein
-           - Multiple substrates should be separated by '.'
-        2. Amino Acid Sequence: Full protein sequence in single-letter code
-           - Must be separated from substrates by '|'
-           - Requires valid amino acid letters (A-Z)
-        3. Product SMILES: Resulting chemical structure(s)
-           - Separated by '>>'
-           - Multiple products should be separated by '.'
-    
-    Output Format:
-        Returns the invervals in very human readable way. Also, make sure the indexes do not exceed the sequence length.
-        something like "The binding sites of the reaction are residues 110-114, 122-125, 177-180, and 258-260."
-        
-    Usage Notes:
-        - All SMILES notations must be chemically valid
-        - Protein sequence must be in correct single-letter amino acid code
-        - Tool requires complete reaction context (substrate + protein + product)
-        - Predictions are based on machine learning models trained on known enzyme-substrate interactions
+        - Reaction SMILES must follow this structure: substrate SMILES | amino acid sequence >> product SMILES
+        - Example:  CC(=O)Cc1ccccc1|MTENALVR>>CC(O)Cc1ccccc1
 """
 
     @staticmethod
@@ -153,7 +128,7 @@ class ExtractBindingSites(BiocatalysisAssistantBaseTool):
             reaction_smiles: The reaction SMILES string.
 
         Returns:
-            String containing the extracted binding sites.
+            String containing the extracted binding sites or an error message.
 
         Raises:
             ValueError: If binding site extraction fails.
@@ -172,7 +147,11 @@ class ExtractBindingSites(BiocatalysisAssistantBaseTool):
             clean_intervals = [
                 interval for interval in intervals if interval[1] <= seq_length
             ]
-            return str(clean_intervals)
+
+            if len(clean_intervals) == 0:
+                return "Failed to extract binding sites."
+            else:
+                return str(clean_intervals)
 
         except Exception as e:
             logger.error(f"Error in ExtractBindingSites: {e}")

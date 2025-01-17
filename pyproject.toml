@@ -54,12 +54,13 @@ bitsandbytes = "0.42.0"
 accelerate = "^1.0.1"
 langchain-ollama = "^0.2.0"
 pandas = "^2.0.0"
+click = "^8.1.8"
 
 [tool.poetry.scripts]
 lmabc = "lmabc.cli:main"
 lmabc-app = "lmabc.app.launcher:main"
 
-[tool.poetry.dev-dependencies]
+[tool.group.dev.dependencies]
 jupyter = "^1.0.0"
 mypy = "^1.0.0"
 pytest = "^7.4.4"
