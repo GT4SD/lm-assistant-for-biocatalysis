@@ -190,7 +190,11 @@ def get_chat_message(contents: str = "", align: str = "left") -> str:
 
 
 def create_biocatalysis_assistant(
-    model: str, provider: str, use_memory: bool = True, **model_kwargs: Dict[str, Any]
+    model: str,
+    provider: str,
+    use_memory: bool = True,
+    verbose: bool = False,
+    **model_kwargs: Dict[str, Any],
 ) -> Any:
     """
     Create and initialize the Biocatalysis Assistant.
@@ -204,7 +208,11 @@ def create_biocatalysis_assistant(
         Initialized Biocatalysis Assistant.
     """
     agent = BiocatalysisAssistant(
-        model=model, provider=provider, use_memory=use_memory, model_kwargs=model_kwargs
+        model=model,
+        provider=provider,
+        use_memory=use_memory,
+        verbose=verbose,
+        model_kwargs=model_kwargs,
     )
     return agent.initiate_agent()
 
@@ -231,6 +239,8 @@ def initialize_session_state() -> None:
         st.session_state.selected_model = PROVIDER_MODELS["watsonx"][0]
     if "use_memory" not in st.session_state:
         st.session_state.use_memory = True
+    if "verbose" not in st.session_state:
+        st.session_state.verbose = True
 
 
 initialize_session_state()
@@ -483,6 +493,8 @@ def settings_page() -> None:
         "🧠 Use Memory", value=st.session_state.use_memory
     )
 
+    st.session_state.verbose = st.checkbox("💬 Verbose", value=st.session_state.verbose)
+
     additional_settings = st.text_area("🔧Additional Settings (JSON)")
 
     additional_params: Dict[str, Any] = {}
@@ -499,6 +511,7 @@ def settings_page() -> None:
                 new_agent = create_biocatalysis_assistant(
                     model=model,
                     provider=provider,
+                    verbose=st.session_state.verbose,
                     use_memory=st.session_state.use_memory,
                     **additional_params,
                 )

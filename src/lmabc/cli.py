@@ -256,8 +256,9 @@ def main():
     print(
         HIGHLIGHT_COLOR + "\nInitializing Biocatalysis Assistant..." + Style.RESET_ALL
     )
-    agent = BiocatalysisAssistant(model=model, provider=provider).initiate_agent()
-    agent.verbose = verbose
+    agent = BiocatalysisAssistant(
+        model=model, provider=provider, verbose=verbose
+    ).initiate_agent()
 
     print(
         SUCCESS_COLOR

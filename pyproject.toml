@@ -27,7 +27,7 @@ tqdm = "^4.25.0"
 # For internal packages
 # internal-package = { version = "^0.0.1", source = "internal_private" }
 python-dotenv = "^1.0.1"
-
+langchain = "^0.3.15"
 ibm-generative-ai = "^3.0.0"
 ipykernel = "^6.29.5"
 pydantic-settings = "^2.4.0"
@@ -46,8 +46,6 @@ rcsbsearchapi = "^1.6.0"
 protobuf = "3.20.3"
 importlib-resources = "^6.4.5"
 langchain-ibm = "^0.3.1"
-langchain = "^0.3.3"
-langchain-community = "^0.3.2"
 langchain-huggingface = "^0.1.0"
 enzeptional = "^1.0.4"
 bitsandbytes = "0.42.0"
@@ -55,6 +53,7 @@ accelerate = "^1.0.1"
 langchain-ollama = "^0.2.0"
 pandas = "^2.0.0"
 click = "^8.1.8"
+langchain-community = "^0.3.15"
 
 [tool.poetry.scripts]
 lmabc = "lmabc.cli:main"

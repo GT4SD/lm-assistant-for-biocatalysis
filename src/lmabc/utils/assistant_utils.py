@@ -43,6 +43,7 @@ def create_agent(
     tools: list[BaseTool],
     llm: Union[BaseChatModel, BaseLLM],
     use_memory: bool = True,
+    verbose: bool=True
 ) -> AgentExecutor:
     """Create an agent executor.
 
@@ -111,17 +112,21 @@ def create_agent(
     {agent_scratchpad}
     (reminder to respond in a JSON blob no matter what)"""
 
-    memory =  ConversationBufferMemory(
-        memory_key="chat_history",
-        return_messages=True,
-        output_key="output"
-    ) if use_memory else None
+    memory = (
+        ConversationBufferMemory(
+            memory_key="chat_history", return_messages=True, output_key="output"
+        )
+        if use_memory
+        else None
+    )
 
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", system_prompt),
-        MessagesPlaceholder("chat_history", optional=True),
-        ("human", human_prompt),
-    ]).partial(
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", system_prompt),
+            MessagesPlaceholder("chat_history", optional=True),
+            ("human", human_prompt),
+        ]
+    ).partial(
         tools=render_text_description_and_args(list(tools)),
         tool_names=", ".join([t.name for t in tools]),
     )
@@ -141,6 +146,11 @@ def create_agent(
     )
 
     return AgentExecutor(
-        agent=agent, tools=tools, handle_parsing_errors=True, verbose=True, memory=memory, max_iterations=5,
-        early_stopping_method="force"
+        agent=agent,
+        tools=tools,
+        handle_parsing_errors=True,
+        verbose=verbose,
+        memory=memory,
+        max_iterations=5,
+        early_stopping_method="generate",
     )

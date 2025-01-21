@@ -318,7 +318,7 @@ class OptimizeEnzymeSequences(BiocatalysisAssistantBaseTool):
     ) -> str:
         """
         Run enzyme sequence optimization.
-        
+
         Args:
             substrate_smiles: SMILES string of the substrate.
             product_smiles: SMILES string of the product.
@@ -326,30 +326,30 @@ class OptimizeEnzymeSequences(BiocatalysisAssistantBaseTool):
             scorer_type: Type of scorer to use (default: "feasibility").
             intervals: List of intervals for mutation (default: []).
             number_of_results: Number of results to return (default: 10).
-            
+
         Returns:
             A formatted string containing the optimization results.
-        
+
         Raises:
             ValueError: If input validation fails or optimization fails.
         """
         if not substrate_smiles or not product_smiles or not protein_sequence:
             return "Error: Missing required input parameters. Please provide substrate_smiles, product_smiles, and protein_sequence."
-            
+
         if scorer_type not in ["feasibility", "kcat"]:
             return f"Error: Invalid scorer_type '{scorer_type}'. Must be either 'feasibility' or 'kcat'."
-            
+
         if number_of_results is None or number_of_results < 1:
             number_of_results = 10
-            
+
         try:
             if not protein_sequence.isalpha():
                 return "Error: Invalid protein sequence. Must contain only amino acid letters."
-                
+
             config = ENZEPTIONAL_SETTINGS.model_copy(update=kwargs)
             use_xgboost_scorer = scorer_type == "kcat"
             scorer_path, scaler_path = self._get_model_paths(scorer_type)
-            
+
             if not intervals:
                 intervals = [[0, len(protein_sequence)]]
             else:
@@ -378,11 +378,9 @@ class OptimizeEnzymeSequences(BiocatalysisAssistantBaseTool):
                 d for d in optimized_sequences if d["sequence"] != protein_sequence
             ]
 
-            optimized_sequences = list({
-                seq["sequence"]: seq
-                for seq in optimized_sequences
-            }.values())
-
+            optimized_sequences = list(
+                {seq["sequence"]: seq for seq in optimized_sequences}.values()
+            )
 
             if not optimized_sequences:
                 return "No improved sequences found."
@@ -393,20 +391,20 @@ class OptimizeEnzymeSequences(BiocatalysisAssistantBaseTool):
             df = pd.read_json(f"{filename}", orient="records", lines=True).head(
                 number_of_results
             )
-            
+
             sequences_info = []
-            for idx, row in enumerate(df.to_dict('records'), 1):
+            for idx, row in enumerate(df.to_dict("records"), 1):
                 sequences_info.append(
                     f"Sequence {idx}:\n"
                     f"Score: {row['score']:.4f}\n"
                     f"Sequence: {row['sequence']}"
                 )
-                
+
             result = (
-                f"Found {len(sequences_info)} optimized sequences.\n\n" +
-                "\n\n".join(sequences_info)
+                f"Found {len(sequences_info)} optimized sequences.\n\n"
+                + "\n\n".join(sequences_info)
             )
-            
+
             return result
 
         except Exception as e:

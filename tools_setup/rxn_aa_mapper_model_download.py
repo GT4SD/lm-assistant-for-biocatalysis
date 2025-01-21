@@ -1,6 +1,5 @@
 """Model setup for RXNAAMapper"""
 
-
 import logging
 from pathlib import Path
 
@@ -10,6 +9,7 @@ from rxn_aa_mapper.tokenization import LMEnzymaticReactionTokenizer
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
+
 
 def download_bert_model(cache_dir):
     """Download and save the BERT model to the cache directory."""
@@ -34,13 +34,15 @@ def download_bert_model(cache_dir):
     else:
         logger.info(f"Model already exists at {model_path}")
 
+
 @click.command()
-@click.argument('cache_dir', type=click.Path(exists=True))
+@click.argument("cache_dir", type=click.Path(exists=True))
 def main(cache_dir):
     """Main function to set up the model using a provided configuration."""
-    
+
     download_bert_model(Path(cache_dir))
     logger.info("Model setup completed successfully!")
+
 
 if __name__ == "__main__":
     main()
