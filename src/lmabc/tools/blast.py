@@ -53,16 +53,11 @@ class BlastpSettings(BaseSettings):
         trash_dir: Directory to store temporary files like the FASTA query and BLAST output.
     """
 
-    db: Path = (
-        BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("blast")
-        / "blastdb/swissprot"
-    )
+    db: Path = BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("blast") / "blastdb/swissprot"
     evalue: float = 1e-5
     outfmt: str = "6"
     max_target_seqs: int = 5
-    trash_dir: Path = (
-        BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("blast") / "blast_logs"
-    )
+    trash_dir: Path = BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("blast") / "blast_logs"
 
     model_config = SettingsConfigDict(env_prefix="BLASTP_")
 
@@ -111,9 +106,7 @@ class Blastp(BiocatalysisAssistantBaseTool):
         """
         settings = BLAST_SETTINGS
         if not Path(settings.db).parent.exists():
-            logger.warning(
-                f"Database directory {Path(settings.db).parent} does not exist."
-            )
+            logger.warning(f"Database directory {Path(settings.db).parent} does not exist.")
             return False
         if not settings.trash_dir.exists():
             logger.warning(f"Trash directory {settings.trash_dir} does not exist.")
@@ -166,9 +159,7 @@ class Blastp(BiocatalysisAssistantBaseTool):
 
             result = subprocess.run(command, check=True, capture_output=True, text=True)
             if result.returncode != 0:
-                raise ValueError(
-                    f"BLASTP search failed with exit code {result.returncode}"
-                )
+                raise ValueError(f"BLASTP search failed with exit code {result.returncode}")
 
             accession_file_path = settings.trash_dir / "hit_accessions.txt"
             self._extract_accessions(str(output_file_path), str(accession_file_path))
@@ -187,9 +178,9 @@ class Blastp(BiocatalysisAssistantBaseTool):
                 merged_output=str(merged_output_file),
             )
 
-            df = pd.read_json(
-                f"{merged_output_file}", orient="records", lines=True
-            ).to_dict("records")
+            df = pd.read_json(f"{merged_output_file}", orient="records", lines=True).to_dict(
+                "records"
+            )
             return f"The results have been saved to {merged_output_file}, and here is the data inside the result {df}"
 
         except subprocess.CalledProcessError as e:
@@ -216,9 +207,7 @@ class Blastp(BiocatalysisAssistantBaseTool):
             logger.error(f"Error extracting accessions: {e.stderr}")
             raise ValueError("Failed to extract hit accessions") from e
 
-    def _fetch_full_sequences(
-        self, db: str, accession_file: str, sequences_output: str
-    ):
+    def _fetch_full_sequences(self, db: str, accession_file: str, sequences_output: str):
         """
         Fetches full sequences from the BLAST database using the extracted accessions.
 
@@ -275,8 +264,7 @@ class Blastp(BiocatalysisAssistantBaseTool):
             ]
 
             sequences_dict = {
-                record.id: str(record.seq)
-                for record in SeqIO.parse(sequences_output, "fasta")
+                record.id: str(record.seq) for record in SeqIO.parse(sequences_output, "fasta")
             }
             descriptions_dict = {
                 record.id: str(record.description)

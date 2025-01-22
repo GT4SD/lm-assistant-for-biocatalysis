@@ -49,9 +49,7 @@ logger.addHandler(logging.NullHandler())
 class Settings(BaseSettings):
     """Configuration settings."""
 
-    model_config = SettingsConfigDict(
-        env_file=".env", extra="allow", case_sensitive=False
-    )
+    model_config = SettingsConfigDict(env_file=".env", extra="allow", case_sensitive=False)
 
 
 settings = Settings()
@@ -92,9 +90,7 @@ class BiocatalysisAssistant:
         self.verbose = verbose
         self.model_kwargs = model_kwargs
 
-        logger.info(
-            f"Initializing BiocatalysisAssistant with model={model}, provider={provider}"
-        )
+        logger.info(f"Initializing BiocatalysisAssistant with model={model}, provider={provider}")
 
         tool_names = list(TOOL_FACTORY.keys()) if tool_names is None else tool_names
         logger.info(f"Attempting to load the following tools: {tool_names}")
@@ -105,9 +101,7 @@ class BiocatalysisAssistant:
         for tool_name in tool_names:
             try:
                 if tool_name not in TOOL_FACTORY:
-                    raise ValueError(
-                        f"Tool '{tool_name}' is not available in the tool factory."
-                    )
+                    raise ValueError(f"Tool '{tool_name}' is not available in the tool factory.")
 
                 logger.debug(f"Attempting to instantiate {tool_name}")
                 tool_class = TOOL_FACTORY[tool_name]
@@ -125,9 +119,7 @@ class BiocatalysisAssistant:
 
             except Exception as e:
                 failed_tools.append(tool_name)
-                logger.error(
-                    f"Error instantiating {tool_name}: {str(e)}", exc_info=True
-                )
+                logger.error(f"Error instantiating {tool_name}: {str(e)}", exc_info=True)
 
         if successful_tools:
             logger.info(f"Successfully loaded tools: {successful_tools}")

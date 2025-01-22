@@ -53,12 +53,10 @@ class RXNAAMapperConfiguration(BaseSettings):
     """
 
     vocabulary_file: str = str(
-        BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("rxnaamapper")
-        / "vocabulary.txt"
+        BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("rxnaamapper") / "vocabulary.txt"
     )
     aa_sequence_tokenizer_filepath: str = str(
-        BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("rxnaamapper")
-        / "tokenizer.json"
+        BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("rxnaamapper") / "tokenizer.json"
     )
     aa_sequence_tokenizer_type: str = "bert"
     model_path: str = str(
@@ -139,14 +137,12 @@ class ExtractBindingSites(BiocatalysisAssistantBaseTool):
         try:
             mapper = RXNAAMapper(config=RXNAAMAPPER_SETTINGS.model_dump())
             intervals = mapper.get_predicted_active_site(
-                mapper.get_reactant_aa_sequence_attention_guided_maps(
-                    [reaction_smiles]
-                )[0]["mapped_rxn"]
+                mapper.get_reactant_aa_sequence_attention_guided_maps([reaction_smiles])[0][
+                    "mapped_rxn"
+                ]
             )
             seq_length = len(reaction_smiles.split("|")[1].split(">>")[0].strip())
-            clean_intervals = [
-                interval for interval in intervals if interval[1] <= seq_length
-            ]
+            clean_intervals = [interval for interval in intervals if interval[1] <= seq_length]
 
             if len(clean_intervals) == 0:
                 return "Failed to extract binding sites."
@@ -167,9 +163,7 @@ class ExtractBindingSites(BiocatalysisAssistantBaseTool):
         Raises:
             NotImplementedError: Async execution is not implemented.
         """
-        raise NotImplementedError(
-            "Async execution not implemented for ExtractBindingSites."
-        )
+        raise NotImplementedError("Async execution not implemented for ExtractBindingSites.")
 
 
 class GetElementsOfReaction(BiocatalysisAssistantBaseTool):

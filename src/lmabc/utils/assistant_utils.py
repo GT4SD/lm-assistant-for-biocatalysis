@@ -43,7 +43,7 @@ def create_agent(
     tools: list[BaseTool],
     llm: Union[BaseChatModel, BaseLLM],
     use_memory: bool = True,
-    verbose: bool=True
+    verbose: bool = True,
 ) -> AgentExecutor:
     """Create an agent executor.
 
@@ -120,13 +120,11 @@ def create_agent(
         else None
     )
 
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            ("system", system_prompt),
-            MessagesPlaceholder("chat_history", optional=True),
-            ("human", human_prompt),
-        ]
-    ).partial(
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", system_prompt),
+        MessagesPlaceholder("chat_history", optional=True),
+        ("human", human_prompt),
+    ]).partial(
         tools=render_text_description_and_args(list(tools)),
         tool_names=", ".join([t.name for t in tools]),
     )
@@ -135,9 +133,7 @@ def create_agent(
         RunnablePassthrough.assign(
             agent_scratchpad=lambda x: format_log_to_str(x["intermediate_steps"]),
             chat_history=lambda x: (  #  noqa: ARG005
-                memory.chat_memory.messages
-                if (use_memory and memory is not None)
-                else []
+                memory.chat_memory.messages if (use_memory and memory is not None) else []
             ),
         )
         | prompt

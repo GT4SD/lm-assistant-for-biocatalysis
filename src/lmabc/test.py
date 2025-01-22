@@ -80,9 +80,7 @@ def print_results(individual_results, full_success, total_tools):
     print("\nFull Assistant Test:")
     print("-" * 50)
     status = "✓" if full_success else "✗"
-    print(
-        f"{status} Assistant Initialization: {'Success' if full_success else 'Failed'}"
-    )
+    print(f"{status} Assistant Initialization: {'Success' if full_success else 'Failed'}")
     print(f"Total tools loaded: {total_tools}")
 
     print("\nFor detailed logs, check 'biocatalysis_test.log'")

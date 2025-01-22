@@ -69,7 +69,6 @@ class FindPDBStructure(BiocatalysisAssistantBaseTool):
     def _run(self, protein_sequence: str) -> str:
         """Run FindPDBStructure."""
         try:
-
             # Query
             results = SequenceQuery(
                 protein_sequence,
@@ -86,9 +85,7 @@ class FindPDBStructure(BiocatalysisAssistantBaseTool):
                     response = requests.get(url)
                     if response.status_code == 200:
                         data = response.json()
-                        tmp_target_sequence = data["entity_poly"][
-                            "pdbx_seq_one_letter_code_can"
-                        ]
+                        tmp_target_sequence = data["entity_poly"]["pdbx_seq_one_letter_code_can"]
                         if tmp_target_sequence == protein_sequence:
                             return f"pdb code {entry_id} with entity id {entity_id}"
                     else:
@@ -109,9 +106,7 @@ class FindPDBStructure(BiocatalysisAssistantBaseTool):
         Raises:
             NotImplementedError: Async execution is not implemented.
         """
-        raise NotImplementedError(
-            "Async execution not implemented for FindPDBStructure."
-        )
+        raise NotImplementedError("Async execution not implemented for FindPDBStructure.")
 
 
 class DownloadPDBStructure(BiocatalysisAssistantBaseTool):
@@ -179,6 +174,4 @@ class DownloadPDBStructure(BiocatalysisAssistantBaseTool):
         Raises:
             NotImplementedError: Async execution is not implemented.
         """
-        raise NotImplementedError(
-            "Async execution not implemented for DownloadPDBStructure."
-        )
+        raise NotImplementedError("Async execution not implemented for DownloadPDBStructure.")
