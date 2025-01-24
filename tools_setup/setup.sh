@@ -16,6 +16,7 @@ RXNAAMAPPER_CACHE_DIR="${LMABC_LOCAL_CACHE_PATH}rxnaamapper"
 ENZYME_OPTIMIZATION_CACHE_DIR="${LMABC_LOCAL_CACHE_PATH}enzyme_optimization/models"
 MOLECULAR_DYNAMICS_MDP_CACHE_DIR="${LMABC_LOCAL_CACHE_PATH}molecular_dynamics/mdp_files"
 MOLECULAR_DYNAMICS_RUN_CACHE_DIR="${LMABC_LOCAL_CACHE_PATH}molecular_dynamics/run_files"
+BLAST_LOGS_DIR="${LMABC_LOCAL_CACHE_PATH}blast/blast_logs"
 
 print_header "Setting up MD simulations MDP files"
 mkdir -p "$MOLECULAR_DYNAMICS_MDP_CACHE_DIR"
@@ -25,6 +26,10 @@ echo "MDP files instantiated"
 mkdir -p "$MOLECULAR_DYNAMICS_RUN_CACHE_DIR"
 cp src/lmabc/resources/run_files/{run_minimization.sh,run_nvt.sh,run_npt.sh} "$MOLECULAR_DYNAMICS_RUN_CACHE_DIR/"
 echo "MD run files instantiated"
+
+print_header "Setting up Blast Logs Dir"
+mkdir -p "$BLAST_LOGS_DIR"
+
 
 mkdir -p "$RXNAAMAPPER_CACHE_DIR"
 print_header "Setting up RXNAAMapper"
