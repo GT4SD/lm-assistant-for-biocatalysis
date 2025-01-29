@@ -228,9 +228,7 @@ class MDPFileUpdater:
 class SimulationStage(ABC):
     """Abstract base class for simulation stages."""
 
-    def __init__(
-        self, config: Dict[str, Any], stage_name: str, mdp_updater: MDPFileUpdater
-    ):
+    def __init__(self, config: Dict[str, Any], stage_name: str, mdp_updater: MDPFileUpdater):
         """
         Initialize simulation stages.
 

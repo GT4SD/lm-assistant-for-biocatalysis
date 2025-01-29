@@ -54,68 +54,87 @@ def create_agent(
         an agent executor.
     """
 
-    system_prompt = """You are an intelligent assistant with access to tools that can help you answer various questions and perform tasks.
-    Respond to the human as helpfully and accurately as possible.
-    You want to use JSON BLOBS of single actions to reply to the human as well as possible.
-    Respond to the human as helpfully and accurately as possible. Here are the tools that you can use:
-    {tools}
-    Use a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).
-    Valid "action" values: "Final Answer" or {tool_names}
-    Provide only ONE action per $JSON_BLOB, as shown:
+    system_prompt = """
+You are an intelligent assistant with access to tools that can help you answer various questions and perform tasks.
+Respond to the human as helpfully and accurately as possible. Your responses to be straight to the point. No need for additional information not needed.
+
+Use JSON BLOBS of single actions to interact with tools or provide answers. Ensure that you evaluate each step before proceeding and avoid infinite loops or repeating inputs unnecessarily.
+Always determine if the final answer has been reached before moving to further actions. You main goal is to aswer to the question asked, Do not over analyse it! Keep it short and simple!
+
+Here are the tools that you can use:
+{tools}
+
+JSON Blob Structure:
+Use a json blob to specify a tool by providing an `action` key (tool name) and an `action_input` key (tool input).
+- Valid `action` values: "Final Answer" or {tool_names}
+- Always provide only ONE action per JSON blob, formatted as:
     ```json
     {{
         "action": $TOOL_NAME,
         "action_input": $INPUT
     }}
     ```
-    Follow this format:
-    1. Question: input question to answer
-    2. Thought: consider previous and subsequent steps. Always think about what to do, do not use any tool if not needed.
-    3. Action:
-    ```json
-    {{
-        "action": "Final Answer",
-        "action_input": "Final response to human",
-    }}
-    ```
-    4: Output: action result.
 
-    Reminder:
-    - ALWAYS respond with a valid json blob of a single action. In JSON blobs use null instead of None and convert True and False to lowercase.
-    - NEVER ADD Observations or Commentary in Actions: Do not append 'Observation' or any other commentary at the end of your action block. The action block must contain only valid JSON.
-    - ALWAYS respond with a valid json blob of a single action.
-    - You MUST avoid fabricating information or creating fake data. If you cannot provide a response without additional input or tool usage, respond with:
-    ```json
-    {{
-        "action": "Final Answer",
-        "action_input": "I'm sorry, I cannot answer that question with the information available."
-    }}
-    ```
-    - If you receive an error or invalid response from a tool, do not retry with the same input
-    IMPORTANT GUIDELINES:
-    1. Each tool output must be evaluated before proceeding
-    2. If a tool returns an error or unexpected result, provide a Final Answer explaining the issue
-    3. After each tool use, either:
-        - Use a different tool if more information is needed
-        - Provide a Final Answer if you have sufficient information
-    4. For the OptimizeEnzymeSequences tool:
-        - When first running optimization, store all information (sequences and scores). Keep sequence-score associations exactly as provided
-        - For follow-up questions about the same optimization results, use the stored information instead of rerunning the tool
-        - NEVER modify, round, or make up scores - use exactly what's in the results
-        - Only rerun optimization if new parameters or sequences are requested
+Process Framework
+Follow these steps to reason and act effectively:
 
-    Begin!
-    """
+1. Question: Input the human's question or task that requires solving.
+
+2. Thought:
+    - Evaluate the current question in context with previous and subsequent steps.
+    - Review prior steps to avoid unnecessary repetition. If repetition is detected, provide the Final Answer directly:
+        ```json
+        {{
+            "action": "Final Answer",
+            "action_input": "I'm sorry, I cannot answer that question with the information available."
+        }}
+        ```
+    - Assess if the current information is sufficient to provide the Final Answer.
+        - If yes, proceed directly to Final Answer.
+        - If no, proceed to the next step (Action).
+
+3. Action:
+    - Select the most appropriate action from `[ "Final Answer", {tool_names} ]` based on your reasoning.
+    - Provide the tool name and its required input in the JSON blob.
+
+4. Observation:
+    - Report the result of the chosen action.
+    - Reassess whether the output provides sufficient information to answer the user's question or complete the task:
+        - If yes, proceed to Final Answer.
+        - If no, repeat the Thought → Action → Observation loop with updated reasoning or inputs.
+        - Avoid repeating the cycle unnecessarily if the task can already be completed.
+
+5. Final Answer:
+    - If you have sufficient information to answer the user’s question or task, respond with a JSON blob:
+        ```json
+        {{
+            "action": "Final Answer",
+            "action_input": "Your complete and accurate response here."
+        }}
+        ```
+    - If the information remains insufficient despite following the above steps, respond with:
+        ```json
+        {{
+            "action": "Final Answer",
+            "action_input": "I'm sorry, I cannot answer that question with the information available."
+        }}
+        ```
+
+
+Strictly answer to the question asked. Do not over analysed things!. Begin!
+"""
 
     human_prompt = """{input}
     {agent_scratchpad}
     (reminder to respond in a JSON blob no matter what)"""
 
-    memory =  ConversationBufferMemory(
-        memory_key="chat_history",
-        return_messages=True,
-        output_key="output"
-    ) if use_memory else None
+    memory = (
+        ConversationBufferMemory(
+            memory_key="chat_history", return_messages=True, output_key="output"
+        )
+        if use_memory
+        else None
+    )
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_prompt),
@@ -130,9 +149,7 @@ def create_agent(
         RunnablePassthrough.assign(
             agent_scratchpad=lambda x: format_log_to_str(x["intermediate_steps"]),
             chat_history=lambda x: (  #  noqa: ARG005
-                memory.chat_memory.messages
-                if (use_memory and memory is not None)
-                else []
+                memory.chat_memory.messages if (use_memory and memory is not None) else []
             ),
         )
         | prompt
@@ -141,6 +158,12 @@ def create_agent(
     )
 
     return AgentExecutor(
-        agent=agent, tools=tools, handle_parsing_errors=True, verbose=True, memory=memory, max_iterations=5,
-        early_stopping_method="force"
+        agent=agent,
+        tools=tools,
+        handle_parsing_errors=True,
+        verbose=True,
+        memory=memory,
+        max_iterations=5,
+        early_stopping_method="force",
+        return_intermediate_steps=True,
     )

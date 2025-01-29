@@ -38,9 +38,7 @@ def main():
     try:
         import streamlit.web.cli as stcli
     except ImportError:
-        logger.info(
-            "Streamlit is not installed. Please install it to use this feature."
-        )
+        logger.info("Streamlit is not installed. Please install it to use this feature.")
         sys.exit(1)
 
     package_dir = Path(__file__).parent.absolute()

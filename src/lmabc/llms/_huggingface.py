@@ -73,6 +73,6 @@ def create_huggingface_llm(model: str, **model_kwargs) -> ChatHuggingFace:
         do_sample=bool(direct_params["do_sample"]),
         repetition_penalty=direct_params["repetition_penalty"],
         return_full_text=bool(direct_params["return_full_text"]),
-        **other_kwargs
+        **other_kwargs,
     )
     return ChatHuggingFace(llm=llm, verbose=True)

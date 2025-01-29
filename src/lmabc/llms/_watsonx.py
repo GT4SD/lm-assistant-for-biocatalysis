@@ -35,9 +35,7 @@ from pydantic import (
 load_dotenv()
 
 watsonx_api_key = os.getenv("WATSONX_API_KEY")
-watsonx_url = SecretStr(
-    os.getenv("WATSONX_URL", default="https://us-south.ml.cloud.ibm.com")
-)
+watsonx_url = SecretStr(os.getenv("WATSONX_URL", default="https://us-south.ml.cloud.ibm.com"))
 watsonx_project_id = os.getenv("WATSONX_PROJECT_ID")
 
 DEFAULT_PARAMETERS = {

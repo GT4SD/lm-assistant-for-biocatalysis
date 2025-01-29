@@ -44,9 +44,7 @@ logger.addHandler(logging.NullHandler())
 class MutagenesisConfiguration(BaseSettings):
     """Configuration values for the Mutagenesis tool."""
 
-    output_dir: Path = BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path(
-        "mutagenesis"
-    )
+    output_dir: Path = BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("mutagenesis")
     clean_pdb_dir: Path = output_dir / "clean_pdb"
     mutated_pdb_dir: Path = output_dir / "mutated_pdb"
     pymol_path: str = "pymol"
@@ -126,9 +124,7 @@ class Mutagenesis(BiocatalysisAssistantBaseTool):
                 else:
                     try:
                         path_obj.mkdir(parents=True, exist_ok=True)
-                        logger.info(
-                            f"Directory {path} was missing and has been created."
-                        )
+                        logger.info(f"Directory {path} was missing and has been created.")
                         return True
                     except Exception as e:
                         logger.error(f"Failed to create directory {path}. Error: {e}")
@@ -208,9 +204,7 @@ class Mutagenesis(BiocatalysisAssistantBaseTool):
             A list of mutation strings in the format 'OriginalAA{position}NewAA'.
         """
         mutations = []
-        for i, (orig, target) in enumerate(
-            zip(original_sequence, target_sequence), start=1
-        ):
+        for i, (orig, target) in enumerate(zip(original_sequence, target_sequence), start=1):
             if orig != target:
                 mutations.append(f"{orig}{i}{target}")
         return mutations
@@ -251,9 +245,7 @@ class Mutagenesis(BiocatalysisAssistantBaseTool):
         return aa_dict.get(one_letter_code.upper(), "UNK")
 
     @staticmethod
-    def perform_mutations(
-        pdb_file: Path, mutations: List[str], output_file: Path
-    ) -> None:
+    def perform_mutations(pdb_file: Path, mutations: List[str], output_file: Path) -> None:
         """
         Apply specified mutations to a protein structure using PyMOL.
 
@@ -325,9 +317,7 @@ class Mutagenesis(BiocatalysisAssistantBaseTool):
 
         return cast(float, sup.rms)
 
-    def _run(
-        self, pdb_code: str, target_sequence: str, perform_rmsd: bool = False
-    ) -> str:
+    def _run(self, pdb_code: str, target_sequence: str, perform_rmsd: bool = False) -> str:
         """
         Execute the mutagenesis process on a given protein structure.
 

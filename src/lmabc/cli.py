@@ -90,11 +90,7 @@ researchers.{Style.RESET_ALL}
     print(textwrap.dedent(description))
 
     print(INFO_COLOR + "Type 'exit' to quit, 'help' for commands." + Style.RESET_ALL)
-    print(
-        INFO_COLOR
-        + "Before starting please set up the following parameters:"
-        + Style.RESET_ALL
-    )
+    print(INFO_COLOR + "Before starting please set up the following parameters:" + Style.RESET_ALL)
 
 
 def clear_screen():
@@ -135,12 +131,7 @@ def get_verbosity():
         elif verbosity == "f":
             return False
         else:
-            print(
-                "\n"
-                + ERROR_COLOR
-                + "Invalid input. Please try again."
-                + Style.RESET_ALL
-            )
+            print("\n" + ERROR_COLOR + "Invalid input. Please try again." + Style.RESET_ALL)
 
 
 def get_model_and_provider(default_model, default_provider):
@@ -169,9 +160,7 @@ def get_model_and_provider(default_model, default_provider):
             new_model, new_provider = choice.split()
             return new_model, new_provider
         except ValueError:
-            print(
-                ERROR_COLOR + "Invalid input. Using default settings." + Style.RESET_ALL
-            )
+            print(ERROR_COLOR + "Invalid input. Using default settings." + Style.RESET_ALL)
             return default_model, default_provider
 
 
@@ -220,11 +209,7 @@ def print_version():
     """Display the version information of the Biocatalysis Assistant CLI."""
     try:
         version = importlib.metadata.version("lmabc")
-        print(
-            INFO_COLOR
-            + f"Biocatalysis Assistant CLI Version {version}"
-            + Style.RESET_ALL
-        )
+        print(INFO_COLOR + f"Biocatalysis Assistant CLI Version {version}" + Style.RESET_ALL)
     except importlib.metadata.PackageNotFoundError:
         print(INFO_COLOR + "Version information could not be found." + Style.RESET_ALL)
 
@@ -249,13 +234,9 @@ def main():
 
     verbose = get_verbosity()
 
-    model, provider = get_model_and_provider(
-        settings.default_model, settings.default_provider
-    )
+    model, provider = get_model_and_provider(settings.default_model, settings.default_provider)
 
-    print(
-        HIGHLIGHT_COLOR + "\nInitializing Biocatalysis Assistant..." + Style.RESET_ALL
-    )
+    print(HIGHLIGHT_COLOR + "\nInitializing Biocatalysis Assistant..." + Style.RESET_ALL)
     agent = BiocatalysisAssistant(model=model, provider=provider).initiate_agent()
     agent.verbose = verbose
 

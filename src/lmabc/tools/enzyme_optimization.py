@@ -59,27 +59,15 @@ class EnzeptinalConfiguration(BaseSettings):
         default="feasibility",
         description="Type of scoring model ('feasibility' or 'kcat').",
     )
-    num_iterations: int = Field(
-        default=3, description="Number of optimization iterations."
-    )
-    num_sequences: int = Field(
-        default=5, description="Number of sequences to optimize."
-    )
-    num_mutations: int = Field(
-        default=5, description="Number of mutations per iteration."
-    )
-    time_budget: int = Field(
-        default=3600, description="Time budget for optimization in seconds."
-    )
+    num_iterations: int = Field(default=3, description="Number of optimization iterations.")
+    num_sequences: int = Field(default=5, description="Number of sequences to optimize.")
+    num_mutations: int = Field(default=5, description="Number of mutations per iteration.")
+    time_budget: int = Field(default=3600, description="Time budget for optimization in seconds.")
     batch_size: int = Field(default=5, description="Batch size for optimization.")
     top_k: int = Field(default=3, description="Top K sequences to consider.")
-    selection_ratio: float = Field(
-        default=0.25, description="Selection ratio for optimization."
-    )
+    selection_ratio: float = Field(default=0.25, description="Selection ratio for optimization.")
     tool_dir: Path = Field(
-        default=BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path(
-            "enzyme_optimization"
-        ),
+        default=BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("enzyme_optimization"),
         description="Output directory.",
     )
     output_filename: str = Field(
@@ -228,9 +216,7 @@ class OptimizerFactory:
         language_model_path = "facebook/esm2_t33_650M_UR50D"
         chem_model_path = "seyonec/ChemBERTa-zinc-base-v1"
 
-        protein_model = ModelFactory.create_embedder(
-            language_model_path, language_model_path
-        )
+        protein_model = ModelFactory.create_embedder(language_model_path, language_model_path)
         chem_model = ModelFactory.create_embedder(chem_model_path, chem_model_path)
 
         mutation_config = {
@@ -240,9 +226,7 @@ class OptimizerFactory:
             "unmasking_model_path": language_model_path,
         }
 
-        mutator = SequenceMutator(
-            sequence=protein_sequence, mutation_config=mutation_config
-        )
+        mutator = SequenceMutator(sequence=protein_sequence, mutation_config=mutation_config)
         mutator.set_top_k(ENZEPTIONAL_SETTINGS.top_k)
 
         scorer = SequenceScorer(
@@ -318,7 +302,7 @@ class OptimizeEnzymeSequences(BiocatalysisAssistantBaseTool):
     ) -> str:
         """
         Run enzyme sequence optimization.
-        
+
         Args:
             substrate_smiles: SMILES string of the substrate.
             product_smiles: SMILES string of the product.
@@ -326,30 +310,30 @@ class OptimizeEnzymeSequences(BiocatalysisAssistantBaseTool):
             scorer_type: Type of scorer to use (default: "feasibility").
             intervals: List of intervals for mutation (default: []).
             number_of_results: Number of results to return (default: 10).
-            
+
         Returns:
             A formatted string containing the optimization results.
-        
+
         Raises:
             ValueError: If input validation fails or optimization fails.
         """
         if not substrate_smiles or not product_smiles or not protein_sequence:
             return "Error: Missing required input parameters. Please provide substrate_smiles, product_smiles, and protein_sequence."
-            
+
         if scorer_type not in ["feasibility", "kcat"]:
             return f"Error: Invalid scorer_type '{scorer_type}'. Must be either 'feasibility' or 'kcat'."
-            
+
         if number_of_results is None or number_of_results < 1:
             number_of_results = 10
-            
+
         try:
             if not protein_sequence.isalpha():
                 return "Error: Invalid protein sequence. Must contain only amino acid letters."
-                
+
             config = ENZEPTIONAL_SETTINGS.model_copy(update=kwargs)
             use_xgboost_scorer = scorer_type == "kcat"
             scorer_path, scaler_path = self._get_model_paths(scorer_type)
-            
+
             if not intervals:
                 intervals = [[0, len(protein_sequence)]]
             else:
@@ -378,11 +362,9 @@ class OptimizeEnzymeSequences(BiocatalysisAssistantBaseTool):
                 d for d in optimized_sequences if d["sequence"] != protein_sequence
             ]
 
-            optimized_sequences = list({
-                seq["sequence"]: seq
-                for seq in optimized_sequences
-            }.values())
-
+            optimized_sequences = list(
+                {seq["sequence"]: seq for seq in optimized_sequences}.values()
+            )
 
             if not optimized_sequences:
                 return "No improved sequences found."
@@ -390,32 +372,25 @@ class OptimizeEnzymeSequences(BiocatalysisAssistantBaseTool):
             filename: Path = config.tool_dir / "output" / config.output_filename
             self._save_results(results=optimized_sequences, filename=filename)
 
-            df = pd.read_json(f"{filename}", orient="records", lines=True).head(
-                number_of_results
-            )
-            
+            df = pd.read_json(f"{filename}", orient="records", lines=True).head(number_of_results)
+
             sequences_info = []
-            for idx, row in enumerate(df.to_dict('records'), 1):
+            for idx, row in enumerate(df.to_dict("records"), 1):
                 sequences_info.append(
-                    f"Sequence {idx}:\n"
-                    f"Score: {row['score']:.4f}\n"
-                    f"Sequence: {row['sequence']}"
+                    f"Sequence {idx}:\nScore: {row['score']:.4f}\nSequence: {row['sequence']}"
                 )
-                
-            result = (
-                f"Found {len(sequences_info)} optimized sequences.\n\n" +
-                "\n\n".join(sequences_info)
+
+            result = f"Found {len(sequences_info)} optimized sequences.\n\n" + "\n\n".join(
+                sequences_info
             )
-            
+
             return result
 
         except Exception as e:
             logger.error(f"Error in OptimizeEnzymeSequences: {e}")
             return f"Error during optimization: {str(e)}"
 
-    def _get_model_paths(
-        self, scorer_type: str = "feasibility"
-    ) -> Tuple[str, Optional[str]]:
+    def _get_model_paths(self, scorer_type: str = "feasibility") -> Tuple[str, Optional[str]]:
         """
         Get paths for the scorer model and scaler.
 
@@ -449,6 +424,4 @@ class OptimizeEnzymeSequences(BiocatalysisAssistantBaseTool):
         Raises:
             NotImplementedError: Async execution is not implemented.
         """
-        raise NotImplementedError(
-            "Async execution not implemented for OptimizeEnzymeSequences."
-        )
+        raise NotImplementedError("Async execution not implemented for OptimizeEnzymeSequences.")

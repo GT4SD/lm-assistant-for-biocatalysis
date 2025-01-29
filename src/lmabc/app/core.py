@@ -140,9 +140,7 @@ def create_expanded_card(title: str, description: str):
 def tools_page() -> None:
     """Initialize and display the Tools page."""
     st.title("🛠️ Tools")
-    st.write(
-        "Explore our powerful set of tools to supercharge your biocatalysis research!"
-    )
+    st.write("Explore our powerful set of tools to supercharge your biocatalysis research!")
 
     available_tools = []
     if "agent" in st.session_state and st.session_state.agent:
@@ -253,9 +251,7 @@ def sidebar() -> None:
 
         st.markdown("---")
         st.subheader("📚 Github")
-        st.markdown(
-            "[🔗 View Source Code](https://github.com/GT4SD/lm-assistant-for-biocatalysis)"
-        )
+        st.markdown("[🔗 View Source Code](https://github.com/GT4SD/lm-assistant-for-biocatalysis)")
 
         st.markdown("---")
         st.subheader("📄 Citation")
@@ -282,9 +278,7 @@ def docs_page() -> None:
 
 def try_example(example_input: str) -> None:
     """Handle 'Try it!' button click."""
-    st.session_state.previous_memory_state = getattr(
-        st.session_state, "use_memory", True
-    )
+    st.session_state.previous_memory_state = getattr(st.session_state, "use_memory", True)
 
     st.session_state.use_memory = False
 
@@ -300,9 +294,7 @@ def render_tool_example(example: dict) -> None:
     with st.expander("Show details", expanded=False):
         st.markdown("#### Example Input")
         st.code(example["example_input"], language="python")
-        if st.button(
-            "🚀 Try this example!", key=f"try_{example['id']}", type="primary"
-        ):
+        if st.button("🚀 Try this example!", key=f"try_{example['id']}", type="primary"):
             try_example(example["example_input"])
 
 
@@ -318,9 +310,10 @@ def handle_example_execution():
 
             response = temp_agent.invoke({"input": st.session_state.current_example})
             if response:
-                st.session_state.messages.append(
-                    {"role": "assistant", "content": response["output"]}
-                )
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": response["output"],
+                })
 
             st.session_state.use_memory = st.session_state.previous_memory_state
             st.session_state.executing_example = False
@@ -359,9 +352,7 @@ def display_chat_messages() -> None:
     """Display chat messages in the UI."""
     for message in st.session_state.messages:
         st.markdown(
-            get_chat_message(
-                message["content"], "right" if message["role"] == "user" else "left"
-            ),
+            get_chat_message(message["content"], "right" if message["role"] == "user" else "left"),
             unsafe_allow_html=True,
         )
 
@@ -383,9 +374,7 @@ def handle_user_input() -> None:
                     {"input": prompt},
                     {
                         "callbacks": (
-                            [streamlit_handler]
-                            if st.session_state.stream_output
-                            else None
+                            [streamlit_handler] if st.session_state.stream_output else None
                         )
                     },
                 )
@@ -394,21 +383,13 @@ def handle_user_input() -> None:
                 if isinstance(full_response, list):
                     full_response = " ".join(full_response)
 
-                st.markdown(
-                    get_chat_message(full_response, "left"), unsafe_allow_html=True
-                )
-                st.session_state.messages.append(
-                    {"role": "assistant", "content": full_response}
-                )
+                st.markdown(get_chat_message(full_response, "left"), unsafe_allow_html=True)
+                st.session_state.messages.append({"role": "assistant", "content": full_response})
 
             except Exception as e:
                 error_message = f"An error occurred: {str(e)}"
-                st.markdown(
-                    get_chat_message(error_message, "left"), unsafe_allow_html=True
-                )
-                st.session_state.messages.append(
-                    {"role": "assistant", "content": error_message}
-                )
+                st.markdown(get_chat_message(error_message, "left"), unsafe_allow_html=True)
+                st.session_state.messages.append({"role": "assistant", "content": error_message})
 
 
 def home_page() -> None:
@@ -449,9 +430,7 @@ def settings_page() -> None:
         index=list(PROVIDER_MODELS.keys()).index(current_provider),
     )
 
-    provider = (
-        selected_provider if selected_provider is not None else get_default_provider()
-    )
+    provider = selected_provider if selected_provider is not None else get_default_provider()
     st.session_state.selected_provider = provider
 
     current_model = cast(
@@ -470,18 +449,14 @@ def settings_page() -> None:
         index=PROVIDER_MODELS[provider].index(current_model),
     )
 
-    model = (
-        selected_model if selected_model is not None else get_default_model(provider)
-    )
+    model = selected_model if selected_model is not None else get_default_model(provider)
     st.session_state.selected_model = model
 
     st.session_state.stream_output = st.checkbox(
         "🌊 Stream Output", value=st.session_state.stream_output
     )
 
-    st.session_state.use_memory = st.checkbox(
-        "🧠 Use Memory", value=st.session_state.use_memory
-    )
+    st.session_state.use_memory = st.checkbox("🧠 Use Memory", value=st.session_state.use_memory)
 
     additional_settings = st.text_area("🔧Additional Settings (JSON)")
 
@@ -502,9 +477,7 @@ def settings_page() -> None:
                     use_memory=st.session_state.use_memory,
                     **additional_params,
                 )
-                st.session_state.sessions[st.session_state.current_session][
-                    "agent"
-                ] = new_agent
+                st.session_state.sessions[st.session_state.current_session]["agent"] = new_agent
                 st.session_state.agent = new_agent
                 st.success("✅ Settings saved successfully!")
             except Exception as e:

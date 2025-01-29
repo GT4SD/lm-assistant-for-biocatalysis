@@ -20,7 +20,7 @@ name = "PyPI"
 priority = "primary"
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.11"
+python = ">=3.10,<3.12"
 tqdm = "^4.25.0"
 # For extras
 
@@ -28,13 +28,11 @@ tqdm = "^4.25.0"
 # internal-package = { version = "^0.0.1", source = "internal_private" }
 python-dotenv = "^1.0.1"
 
-ibm-generative-ai = "^3.0.0"
 ipykernel = "^6.29.5"
 pydantic-settings = "^2.4.0"
 biopython = "^1.84"
 rdkit = "^2024.3.5"
 loguru = "^0.7.2"
-torch = ">=1.0,<=1.12.1"
 streamlit = "1.33"
 colorama = "^0.4.6"
 rxn-aa-mapper = {git = "https://github.com/rxn4chemistry/rxnaamapper.git"}
@@ -55,12 +53,13 @@ accelerate = "^1.0.1"
 langchain-ollama = "^0.2.0"
 pandas = "^2.0.0"
 click = "^8.1.8"
+transformers = "4.46.3"
 
 [tool.poetry.scripts]
 lmabc = "lmabc.cli:main"
 lmabc-app = "lmabc.app.launcher:main"
 
-[tool.group.dev.dependencies]
+[tool.poetry.group.dev.dependencies]
 jupyter = "^1.0.0"
 mypy = "^1.0.0"
 pytest = "^7.4.4"
