@@ -41,6 +41,7 @@ from enzeptional import (  # type: ignore
 )
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from tabulate import tabulate
 from transformers import logging as transformers_logging
 
 from ..configuration import BIOCATALYSIS_AGENT_CONFIGURATION
@@ -59,12 +60,12 @@ class EnzeptinalConfiguration(BaseSettings):
         default="feasibility",
         description="Type of scoring model ('feasibility' or 'kcat').",
     )
-    num_iterations: int = Field(default=3, description="Number of optimization iterations.")
-    num_sequences: int = Field(default=5, description="Number of sequences to optimize.")
+    num_iterations: int = Field(default=2, description="Number of optimization iterations.")
+    num_sequences: int = Field(default=3, description="Number of sequences to optimize.")
     num_mutations: int = Field(default=5, description="Number of mutations per iteration.")
     time_budget: int = Field(default=3600, description="Time budget for optimization in seconds.")
-    batch_size: int = Field(default=5, description="Batch size for optimization.")
-    top_k: int = Field(default=3, description="Top K sequences to consider.")
+    batch_size: int = Field(default=2, description="Batch size for optimization.")
+    top_k: int = Field(default=2, description="Top K sequences to consider.")
     selection_ratio: float = Field(default=0.25, description="Selection ratio for optimization.")
     tool_dir: Path = Field(
         default=BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("enzyme_optimization"),
@@ -91,72 +92,60 @@ class EnzeptinalConfiguration(BaseSettings):
 
 ENZEPTIONAL_SETTINGS = EnzeptinalConfiguration()
 
-ENZEPTIONAL_DESCRIPTION = """OptimizeEnzymeSequences Tool also known as Enzeptional
-This tool must be executed on the system.
+ENZEPTIONAL_DESCRIPTION = """ OptimizeEnzymeSequences (Enzeptional) - Enzyme Sequence Optimization Tool
 
-Description:
-The OptimizeEnzymeSequences tool is designed to optimize enzyme sequences for biocatalysed reactions using the Enzeptional framework. It employs advanced machine learning techniques to suggest mutations that may improve the enzyme's catalytic efficiency or substrate specificity.
+    Description:
+    This tool optimizes enzyme sequences for biocatalytic reactions, enhancing catalytic efficiency and substrate specificity. It leverages machine learning models to suggest mutations that improve enzyme performance based on input substrate and product SMILES representations.
 
-Here is the format of a reaction SMILES or biocatalysed reaction: reactants|amino_acid_sequence>>products
+    Required Input Parameters:
+    1. `substrate_smiles` (str) - SMILES representation of the reactant molecule.
+    2. `product_smiles` (str) - SMILES representation of the desired product molecule.
+    3. `protein_sequence` (str) - Amino acid sequence of the enzyme to optimize.
+    4. `scorer_type` (str) - The scoring model type, either `'feasibility'` (default) or `'kcat'`.
 
-Required: Make sure all the input you are about to use, have the correct type. In case the type do not match, exit and give an error message!
+    Optional Parameters:
+    - `intervals` (List[List[int]]) - List of regions (start, end) to focus mutations on.
+    - `num_iterations` (int) - Number of optimization iterations. Default: 2.
+    - `num_sequences` (int) - Number of sequences optimized per iteration. Default: 5.
+    - `num_mutations` (int) - Number of mutations per iteration. Default: 5.
+    - `time_budget` (int) - Max optimization time (seconds). Default: 3600.
+    - `batch_size` (int) - Number of sequences processed in parallel. Default: 5.
+    - `top_k` (int) - Top sequences to consider per iteration. Default: 3.
+    - `selection_ratio` (float) - Fraction of top sequences selected for the next iteration. Default: 0.25.
+    - `perform_crossover` (bool) - Whether to apply sequence crossover. Default: True.
+    - `crossover_type` (str) - Type of crossover (`'sp_crossover'`, `'uniform_crossover'`). Default: `'sp_crossover'`.
+    - `pad_intervals` (bool) - Whether to pad mutation regions. Default: False.
+    - `minimum_interval_length` (int) - Min length for padded intervals. Default: 8.
+    - `seed` (int) - Random seed for reproducibility. Default: 42.
+    - `number_of_results` (int) - Number of optimized sequences to return. Default: 10.
 
-Functionality:
-- Optimizes protein sequences based on given substrate and product SMILES representations
-- Uses either a feasibility scorer or a kcat (turnover number) scorer for optimization
-- Applies a sequence of mutations and crossovers to generate optimized enzyme variants
+    Output (Tabulated Format):
+    The tool returns a table of optimized enzyme sequences ranked by predicted performance for the given reaction.
 
-Key Parameters:
-1. substrate_smiles (str, required): SMILES representation of the substrate molecule
-2. product_smiles (str, required): SMILES representation of the desired product molecule
-3. protein_sequence (str, required): Amino acid sequence of the enzyme to be optimized
-4. scorer_type (str, required): Type of scoring model to use ('feasibility' or 'kcat'). Default is 'feasibility'
-5. intervals (List[List[int]], optional): Specific regions of the protein sequence to focus mutations on This could be binding sites or active sites. If not provided, the entire sequence is considered
-6. num_iterations (int, optional): Number of optimization iterations to perform. Default is 3
-7. num_sequences (int, optional): Number of sequences to optimize in each iteration. Default is 5
-8. num_mutations (int, optional): Number of mutations to apply per iteration. Default is 5
-9. time_budget (int, optional): Maximum time (in seconds) allowed for optimization. Default is 3600 (1 hour)
-10. batch_size (int, optional): Batch size for processing sequences. Default is 5
-11. top_k (int, optional): Number of top sequences to consider for the next iteration. Default is 3
-12. selection_ratio (float, optional): Ratio of sequences to select for the next iteration. Default is 0.25
-13. tool_dir (Path, Optional): Output directory.
-14. output_filename (str, Optional): Filename of the output file.
-15. perform_crossover (bool, Optional): If crossover should be perform. Default is True"
-15. crossover_type (str, Optional): The type of crossover to perform in case perform_crossover is True. Default is sp_crossover. Here are some that are implemented in the tool: sp_crossover (Performs a single point crossover between two sequences), and uniform_crossover (Performs a uniform crossover between two sequences)"
-17. pad_intervals (bool, Optional): If to perform padding or not of the intervals. Default is False
-18. minimum_interval_length (int, Optional): Minimum length per interval during padding. Default is 8
-19. seed (int, Optional): Random seed. Default is 42
-20: number_of_results (int, optional): Number of result to return. Default is 10.
+    Example output:
 
+    +--------+-----------------------------+--------+
+    | Index  | Sequence                    | Score  |
+    +--------+-----------------------------+--------+
+    | 1      | MVLSPADKTNVKAA...           | 0.9200 |
+    | 2      | MVLAPADKTNVKAA...           | 0.8900 |
+    | 3      | MVLSPADRTNVKAA...           | 0.8750 |
+    | 4      | MVLSAADRNVKAA...            | 0.8600 |
+    | 5      | MVLSPADRKVKAA...            | 0.8450 |
+    +--------+-----------------------------+--------+
 
-Usage Notes:
-- Provide SMILES strings for substrate and product that accurately represent the desired reaction
-- The protein sequence should be in standard single-letter amino acid code
-- When specifying intervals, use a list of [start, end] pairs, e.g., [[0, 50], [100, 150]] to focus on residues 1-50 and 101-150
-- Adjust num_iterations, num_sequences, and num_mutations to balance between exploration and computation time
-- The time_budget parameter can be used to limit long-running optimizations
-- When first running optimization, store all information (sequences and scores). Keep sequence-score associations exactly as provided
-- For follow-up questions about the same optimization results, use the stored information instead of rerunning the tool
-- NEVER modify, round, or make up scores - use exactly what's in the results
-- Only rerun optimization if new parameters or sequences are requested
+    Usage:
+    ```python
+    result = tool._run(
+        substrate_smiles="CCOCC",
+        product_smiles="CCO",
+        protein_sequence="MVLSPADKTNVKAA...",
+        scorer_type="feasibility",
+        number_of_results=5,
+        
+    )
+    ```
 
-Output:
-The tool returns a dictionary containing the best sequences and their score, ranked by their predicted performance for the given substrate-product pair.
-You should return the best sequence with its score, unless you are asked differently or to return a certain amount of sequences!.
-
-Example Usage:
-result = tool._run(
-    substrate_smiles,
-    product_smiles,
-    protein_sequence,
-    scorer_type,
-    intervals,
-    num_iterations,
-    time_budget
-    number_of_results,
-)
-
-This tool is particularly useful for enzyme engineering projects, metabolic engineering, and biocatalysis optimization. It can help researchers identify promising enzyme variants for experimental validation, potentially reducing the time and resources required for directed evolution experiments.
 """
 
 
@@ -374,14 +363,12 @@ class OptimizeEnzymeSequences(BiocatalysisAssistantBaseTool):
 
             df = pd.read_json(f"{filename}", orient="records", lines=True).head(number_of_results)
 
-            sequences_info = []
-            for idx, row in enumerate(df.to_dict("records"), 1):
-                sequences_info.append(
-                    f"Sequence {idx}:\nScore: {row['score']:.4f}\nSequence: {row['sequence']}"
-                )
-
-            result = f"Found {len(sequences_info)} optimized sequences.\n\n" + "\n\n".join(
-                sequences_info
+            table_data = [
+                [idx, row["sequence"], f"{row['score']:.4f}"]
+                for idx, row in enumerate(df.to_dict("records"), 1)
+            ]
+            result = f"Found {len(table_data)} optimized sequences.\n\n" + tabulate(
+                table_data, headers=["Index", "Sequence", "Score"], tablefmt="grid"
             )
 
             return result

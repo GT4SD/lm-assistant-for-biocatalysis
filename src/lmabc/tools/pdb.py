@@ -117,6 +117,8 @@ class DownloadPDBStructure(BiocatalysisAssistantBaseTool):
     This tool must be executed on the system.
     Given a PDB code, DownloadPDBStructure downloads the corresponding PDB structure file from the RCSB PDB database.
     It takes as input a PDB code (e.g., '1abc') and saves the PDB file in the configured output directory.
+
+    This tool must be used only and only if the user asks to wodnload it or strictly needed!
     """
 
     @staticmethod
