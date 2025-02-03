@@ -25,6 +25,7 @@ SOFTWARE.
 """
 
 import logging
+import os
 import subprocess
 import tempfile
 from abc import ABC, abstractmethod
@@ -49,6 +50,10 @@ class SimulationConfiguration(BaseSettings):
             "molecular_dynamics"
         ),
         description="Root directory for simulations.",
+    )
+    gromacs_path: Path = Field(
+        default_factory=lambda: Path(os.getenv("GROMACS_PATH", "/usr/local/gromacs/bin/gmx")),
+        description="Path to GROMACS. Can be set via the 'GROMACS_PATH' environment variable.",
     )
     simulations_dir: Path = Field(
         default_factory=lambda: Path(
@@ -343,7 +348,13 @@ class MDSimulation(BiocatalysisAssistantBaseTool):
                     raise FileNotFoundError(f"Shell script {sh_file} not found.")
 
             try:
-                subprocess.run(["gmx", "--version"], check=True, capture_output=True)
+                if not SIMULATION_SETTINGS.gromacs_path.exists():
+                    logger.error(
+                        f"GROMACS executable not found at {SIMULATION_SETTINGS.gromacs_path}"
+                    )
+                subprocess.run(
+                    [SIMULATION_SETTINGS.gromacs_path, "--version"], check=True, capture_output=True
+                )
                 from pymol import cmd
 
                 _ = cmd

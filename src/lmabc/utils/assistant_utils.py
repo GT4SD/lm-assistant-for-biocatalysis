@@ -43,6 +43,7 @@ def create_agent(
     tools: list[BaseTool],
     llm: Union[BaseChatModel, BaseLLM],
     use_memory: bool = True,
+    verbose: bool = True,
 ) -> AgentExecutor:
     """Create an agent executor.
 
@@ -161,7 +162,7 @@ Strictly answer to the question asked. Do not over analysed things!. Begin!
         agent=agent,
         tools=tools,
         handle_parsing_errors=True,
-        verbose=True,
+        verbose=verbose,
         memory=memory,
         max_iterations=5,
         early_stopping_method="force",

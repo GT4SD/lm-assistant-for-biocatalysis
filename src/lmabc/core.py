@@ -79,6 +79,7 @@ class BiocatalysisAssistant:
         model: str = "HuggingFaceH4/zephyr-7b-beta",
         provider: str = "huggingface",
         use_memory: bool = True,
+        verbose: bool = False,
         model_kwargs: Optional[Dict[str, Any]] = None,
     ):
         """Initialize an agent with a dynamic set of tools."""
@@ -86,6 +87,7 @@ class BiocatalysisAssistant:
         self.model = model
         self.provider = provider
         self.use_memory = use_memory
+        self.verbose = verbose
         self.model_kwargs = model_kwargs
 
         logger.info(f"Initializing BiocatalysisAssistant with model={model}, provider={provider}")
@@ -142,7 +144,9 @@ class BiocatalysisAssistant:
         logger.info("Created LLM instance")
 
         try:
-            agent = create_agent(tools=self.tool_list, llm=llm, use_memory=self.use_memory)
+            agent = create_agent(
+                tools=self.tool_list, llm=llm, use_memory=self.use_memory, verbose=self.verbose
+            )
             logger.info("Successfully created agent")
             return agent
         except Exception as e:
