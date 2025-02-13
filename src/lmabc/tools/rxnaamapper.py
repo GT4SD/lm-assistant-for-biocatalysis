@@ -143,7 +143,9 @@ class ExtractBindingSites(BiocatalysisAssistantBaseTool):
                 rxn_separator=">>",
                 smiles_aa_sequence_separator="|",
             )
-            return str(intervals)
+            intervals_str = ", ".join(f"{start}-{end}" for start, end in intervals)
+            result = "The binding sites are: " + intervals_str
+            return result
 
         except Exception as e:
             logger.error(f"Error in ExtractBindingSites: {e}")
@@ -222,7 +224,14 @@ class GetElementsOfReaction(BiocatalysisAssistantBaseTool):
                 reactants, aa_sequence = precursors.split(smiles_aa_sequence_separator)
             except Exception:
                 reactants = precursors
-            return f"Reactants: {reactants}, AA Sequence: {aa_sequence}, Products: {products}"
+            result = (
+                "Extracted Reaction Elements\n"
+                "=============================\n"
+                "Reactants: " + reactants + "\n"
+                "Amino Acid Sequence: " + aa_sequence + "\n"
+                "Products: " + products
+            )
+            return result
         except Exception as e:
             logger.error(f"Error in GetElementsOfReaction: {e}")
             raise ValueError("Failed to get elements of reaction.")

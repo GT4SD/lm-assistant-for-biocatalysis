@@ -95,7 +95,7 @@ ENZEPTIONAL_SETTINGS = EnzeptinalConfiguration()
 ENZEPTIONAL_DESCRIPTION = """ OptimizeEnzymeSequences (Enzeptional) - Enzyme Sequence Optimization Tool
 
     Description:
-    This tool optimizes enzyme sequences for biocatalytic reactions, enhancing catalytic efficiency and substrate specificity. It leverages machine learning models to suggest mutations that improve enzyme performance based on input substrate and product SMILES representations.
+    This tool optimizes enzyme sequences for biocatalytic reactions, enhancing catalytic efficiency and substrate specificity. The tool applies mutation in the intervals to optimize the reaction. The sequence optimized can be refered to as wildtype.
 
     Required Input Parameters:
     1. `substrate_smiles` (str) - SMILES representation of the reactant molecule.

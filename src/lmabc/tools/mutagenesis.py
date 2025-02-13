@@ -75,7 +75,8 @@ class Mutagenesis(BiocatalysisAssistantBaseTool):
 
     name: str = "Mutagenesis"
     description: str = """
-    This tool performs mutations on protein structures using PyMOL.
+    This tool facilitates the transformation of protein structures by performing targeted mutations using PyMOL. It adapts a given protein structure, specified by its PDB code, to match a desired target sequence using PYMOL. The process involves:
+
     It takes as input:
     - pdb_code (required): The 4-character PDB code of the protein structure to mutate.
     - target_sequence (required): The target protein sequence to mutate towards.

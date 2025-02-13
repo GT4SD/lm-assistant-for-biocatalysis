@@ -33,11 +33,11 @@ from pathlib import Path
 from typing import Any, List, Optional
 
 import pandas as pd
-from Bio import SeqIO
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from tabulate import tabulate
 
 from ..configuration import BIOCATALYSIS_AGENT_CONFIGURATION
+from .blast_utils import BLAST_OPTIONS, BLAST_OUTPUT_FORMATS, BLAST_SPECIFIERS
 from .core import BiocatalysisAssistantBaseTool
 
 logger = logging.getLogger(__name__)
@@ -59,7 +59,7 @@ class BlastpSettings(BaseSettings):
     db: Path = BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("blast") / "blastdb"
 
     evalue: float = 1e-5
-    outfmt: str = "6"
+    outfmt: str = "6 sseqid pident evalue bitscore stitle sseq"
     max_target_seqs: int = 5
     trash_dir: Path = BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("blast") / "blast_logs"
 
@@ -178,50 +178,21 @@ class Blastp(BiocatalysisAssistantBaseTool):
         Raises:
             ValueError: If an invalid BLASTP argument is provided in `**kwargs`.
         """
-        valid_blastp_args = {
-            "query",
-            "db",
-            "evalue",
-            "outfmt",
-            "max_target_seqs",
-            "out",
-            "gapopen",
-            "gapextend",
-            "matrix",
-            "word_size",
-            "threshold",
-            "comp_based_stats",
-            "seg",
-            "soft_masking",
-            "lcase_masking",
-            "subject",
-            "subject_loc",
-            "query_loc",
-            "qcov_hsp_perc",
-            "max_hsps",
-            "num_threads",
-            "remote",
-            "html",
-            "show_gis",
-            "parse_deflines",
-            "num_descriptions",
-            "num_alignments",
-            "line_length",
-            "html",
-            "max_target_seqs",
-            "ungapped",
-            "use_sw_tback",
-        }
 
-        invalid_args = set(kwargs.keys()) - valid_blastp_args
-        if invalid_args:
-            raise ValueError(
-                f"The following arguments are not valid BLASTP arguments: {invalid_args}. "
-                f"Valid arguments are: {valid_blastp_args}"
-            )
+        settings = BLAST_SETTINGS
+        invalid_options = set(kwargs.keys()) - set(BLAST_OPTIONS.keys())
+        effective_evalue = evalue if evalue is not None else settings.evalue
+        effective_outfmt = outfmt if outfmt is not None else settings.outfmt
+        effective_max_target_seqs = (
+            max_target_seqs if max_target_seqs is not None else settings.max_target_seqs
+        )
+        first, *rest = effective_outfmt.split(" ")
+        invalid_outfmt = set({first}) - set(BLAST_OUTPUT_FORMATS.keys())
+        invalid_specifiers = set(rest) - set(BLAST_SPECIFIERS.keys())
+        if any((invalid_options, invalid_outfmt, invalid_specifiers)):
+            raise ValueError("Invalid arguments, please check your inputs")
 
         try:
-            settings = BLAST_SETTINGS
             settings.trash_dir.mkdir(parents=True, exist_ok=True)
 
             if experiment_id is None:
@@ -234,9 +205,6 @@ class Blastp(BiocatalysisAssistantBaseTool):
 
             fasta_file_path = experiment_folder / "query.fasta"
             output_file_path = experiment_folder / "blast_output.txt"
-            accession_file_path = experiment_folder / "hit_accessions.txt"
-            sequences_output_file = experiment_folder / "full_sequences.fasta"
-            merged_output_file = experiment_folder / "merged_results.json"
 
             with fasta_file_path.open("w") as fasta_file:
                 fasta_file.write(f">query_sequence\n{query}\n")
@@ -264,12 +232,6 @@ class Blastp(BiocatalysisAssistantBaseTool):
                 Ensure it is installed in: `{blastdb_path}`
                 """
 
-            effective_evalue = evalue if evalue is not None else settings.evalue
-            effective_outfmt = outfmt if outfmt is not None else settings.outfmt
-            effective_max_target_seqs = (
-                max_target_seqs if max_target_seqs is not None else settings.max_target_seqs
-            )
-
             command: List[Any] = [
                 "blastp",
                 "-query",
@@ -279,7 +241,7 @@ class Blastp(BiocatalysisAssistantBaseTool):
                 "-evalue",
                 str(effective_evalue),
                 "-outfmt",
-                str(effective_outfmt),
+                f"{str(effective_outfmt)}",
                 "-max_target_seqs",
                 str(effective_max_target_seqs),
                 "-out",
@@ -293,22 +255,11 @@ class Blastp(BiocatalysisAssistantBaseTool):
             if result.returncode != 0:
                 raise ValueError(f"BLASTP search failed with exit code {result.returncode}")
 
-            self._extract_accessions(str(output_file_path), str(accession_file_path))
-            self._fetch_full_sequences(
-                db=str(selected_db_path),
-                accession_file=str(accession_file_path),
-                sequences_output=str(sequences_output_file),
-            )
-            self._merge_hits_and_sequences(
-                blastp_output=str(output_file_path),
-                sequences_output=str(sequences_output_file),
-                merged_output=str(merged_output_file),
-            )
-
-            df = pd.read_json(f"{merged_output_file}", orient="records", lines=True)
+            columns = [BLAST_SPECIFIERS[key] for key in rest if key in BLAST_SPECIFIERS]
+            df = pd.read_csv(output_file_path, sep="\t", header=None, names=columns)
             formatted_results = tabulate(
-                df[["subject", "perc_identity", "evalue", "bit_score", "description"]],
-                headers=["Accession", "Identity (%)", "E-Value", "Bit Score", "Description"],
+                df,
+                headers=columns,
                 tablefmt="pretty",
             )
 
@@ -318,9 +269,6 @@ class Blastp(BiocatalysisAssistantBaseTool):
             Results saved in: `{experiment_folder}`
             - Query FASTA File: `{fasta_file_path}`
             - BLAST Output File: `{output_file_path}`
-            - Accession File: `{accession_file_path}`
-            - Sequences File: `{sequences_output_file}`
-            - Merged JSON Results: `{merged_output_file}`
 
             Database Used: `{database_name}`
 
@@ -333,99 +281,6 @@ class Blastp(BiocatalysisAssistantBaseTool):
         except subprocess.CalledProcessError as e:
             logger.error(f"Error running Blastp: {e.stderr}")
             raise ValueError("Failed to perform BLASTP search") from e
-
-    def _extract_accessions(self, blastp_output: str, accession_file: str):
-        """
-        Extracts hit accessions from BLASTP output using awk.
-
-        Args:
-            blastp_output: Path to the BLASTP output file.
-            accession_file: Path to the file where the extracted accessions will be saved.
-
-        Raises:
-            ValueError: If the extraction fails.
-        """
-        try:
-            awk_command = f"awk '{{print $2}}' {blastp_output} > {accession_file}"
-            subprocess.run(awk_command, shell=True, check=True)
-            logger.info(f"Hit accessions saved to {accession_file}")
-
-        except subprocess.CalledProcessError as e:
-            logger.error(f"Error extracting accessions: {e.stderr}")
-            raise ValueError("Failed to extract hit accessions") from e
-
-    def _fetch_full_sequences(self, db: str, accession_file: str, sequences_output: str):
-        """
-        Fetches full sequences from the BLAST database using the extracted accessions.
-
-        Args:
-            db: Path to the BLAST database.
-            accession_file: Path to the file with hit accessions.
-            sequences_output: Path to the file where the full sequences will be saved.
-
-        Raises:
-            ValueError: If the sequence fetching fails.
-        """
-        try:
-            blastdbcmd_command = [
-                "blastdbcmd",
-                "-db",
-                db,
-                "-entry_batch",
-                accession_file,
-                "-out",
-                sequences_output,
-            ]
-            subprocess.run(blastdbcmd_command, check=True)
-            logger.info(f"Full sequences saved to {sequences_output}")
-        except subprocess.CalledProcessError as e:
-            logger.error(f"Error fetching full sequences: {e.stderr}")
-            raise ValueError("Failed to fetch full sequences") from e
-
-    def _merge_hits_and_sequences(
-        self, blastp_output: str, sequences_output: str, merged_output: str
-    ):
-        """
-        Merge BLASTP hits and full sequences and descriptions into a single file.
-
-        Args:
-            blastp_output: Path to the BLASTP output file (tabular format).
-            sequences_output: Path to the full sequences file (FASTA format).
-            merged_output: Path to the file where the merged results will be saved.
-        """
-        try:
-            blastp_df = pd.read_csv(blastp_output, sep="\t", header=None)
-            blastp_df.columns = [
-                "query",
-                "subject",
-                "perc_identity",
-                "alignment_length",
-                "mismatches",
-                "gap_opens",
-                "q_start",
-                "q_end",
-                "s_start",
-                "s_end",
-                "evalue",
-                "bit_score",
-            ]
-
-            sequences_dict = {
-                record.id: str(record.seq) for record in SeqIO.parse(sequences_output, "fasta")
-            }
-            descriptions_dict = {
-                record.id: str(record.description)
-                for record in SeqIO.parse(sequences_output, "fasta")
-            }
-
-            blastp_df["sequence"] = blastp_df["subject"].map(sequences_dict)
-            blastp_df["description"] = blastp_df["subject"].map(descriptions_dict)
-
-            blastp_df.to_json(merged_output, orient="records", lines=True)
-            logger.info(f"Merged results saved to {merged_output}")
-        except Exception as e:
-            logger.error(f"Error merging hits and sequences: {e}")
-            raise ValueError("Failed to merge BLASTP hits and sequences") from e
 
     async def _arun(self, *args, **kwargs) -> str:
         """Async method for blastp."""
