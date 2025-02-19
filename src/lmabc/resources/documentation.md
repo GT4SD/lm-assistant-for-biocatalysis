@@ -21,17 +21,15 @@ WATSONX_PROJECT_ID=your_watsonx_project_id
 ```python
 from lmabc.core import BiocatalysisAssistant
 
-# Initialize the assistant
 assistant = BiocatalysisAssistant(
     model="HuggingFaceH4/zephyr-7b-beta",  # Model name
     provider="huggingface",                 # Provider name
-    use_memory=True                         # Enable conversation memory
+    use_memory=True,                         # Enable conversation memory
+    verbosity=True,                         # See internal thoughts
 )
 
-# Initialize the agent
 agent = assistant.initiate_agent()
 
-# Use the agent
 response = agent.invoke({"input": "your query here"})
 ```
 
@@ -93,10 +91,8 @@ assistant = BiocatalysisAssistant(
 The BiocatalysisAssistant includes conversation memory management:
 
 ```python
-# Enable memory (default)
 assistant = BiocatalysisAssistant(use_memory=True)
 
-# Disable memory
 assistant = BiocatalysisAssistant(use_memory=False)
 ```
 

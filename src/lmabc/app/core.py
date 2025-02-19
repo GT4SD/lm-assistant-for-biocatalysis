@@ -42,6 +42,7 @@ PROVIDER_MODELS: Dict[str, List[str]] = {
         "mistralai/Mistral-7B-Instruct-v0.2",
     ],
     "watsonx": [
+        "mistralai/mistral-large",
         "meta-llama/llama-3-1-70b-instruct",
         "meta-llama/llama-3-8b-instruct",
     ],
@@ -56,7 +57,7 @@ PROVIDER_MODELS: Dict[str, List[str]] = {
 }
 
 st.set_page_config(
-    page_title="Biocatalysis assistant: an LM agent for biocatalysis",
+    page_title="Biocatalysis Assistant: An LM Agent for biocatalysis",
     page_icon="🧪",
     layout="wide",
 )
@@ -396,7 +397,7 @@ def home_page() -> None:
     """Initialize and display the Home page."""
     st.title("Language Model Assistant for Biocatalysis (LM-ABC)")
     st.write(
-        "Welcome to your hub for innovative biocatalysis solutions—explore, analyze, and optimize with ease."
+        "Welcome to your hub for innovative biocatalysis solutions where you can explore, analyze and optimize with ease."
     )
 
     handle_example_execution()
