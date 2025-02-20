@@ -43,8 +43,13 @@ PROVIDER_MODELS: Dict[str, List[str]] = {
     ],
     "watsonx": [
         "mistralai/mistral-large",
-        "meta-llama/llama-3-1-70b-instruct",
-        "meta-llama/llama-3-8b-instruct",
+        "meta-llama/llama-3-3-70b-instruct",
+        "meta-llama/llama-3-2-3b-instruct",
+        "meta-llama/llama-3-1-8b-instruct",
+        "ibm/granite-34b-code-instruct",
+        "ibm/granite-3-8b-instruct",
+        "ibm/granite-3-2b-instruct",
+        "ibm/granite-3-2-8b-instruct-preview-rc",
     ],
     "openai": ["gpt-4-0125-preview", "gpt-4", "gpt-3.5-turbo"],
     "anthropic": [

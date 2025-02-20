@@ -380,7 +380,9 @@ class MDSimulation(BiocatalysisAssistantBaseTool):
         """
         from pymol import cmd
 
-        output_file = input_file.parent / f"{input_file.stem}_protein_only.pdb"
+        input_path = Path(input_file)
+
+        output_file = input_path.parent / f"{input_path.stem}_protein_only.pdb"
 
         cmd.load(str(input_file), "structure")
         cmd.remove("not polymer")
