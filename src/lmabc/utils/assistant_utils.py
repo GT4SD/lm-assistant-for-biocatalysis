@@ -164,7 +164,7 @@ Strictly answer to the question asked. Do not over analysed things!. Begin!
         handle_parsing_errors=True,
         verbose=verbose,
         memory=memory,
-        max_iterations=5,
+        max_iterations=10,
         early_stopping_method="force",
         return_intermediate_steps=True,
     )
