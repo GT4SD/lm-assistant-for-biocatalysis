@@ -182,7 +182,7 @@ class Blastp(BiocatalysisAssistantBaseTool):
         settings = BLAST_SETTINGS
         invalid_options = set(kwargs.keys()) - set(BLAST_OPTIONS.keys())
         effective_evalue = evalue if evalue is not None else settings.evalue
-        effective_outfmt = outfmt if outfmt is not None else settings.outfmt
+        effective_outfmt = str(outfmt) if outfmt is not None else str(settings.outfmt)
         effective_max_target_seqs = (
             max_target_seqs if max_target_seqs is not None else settings.max_target_seqs
         )
@@ -256,12 +256,19 @@ class Blastp(BiocatalysisAssistantBaseTool):
                 raise ValueError(f"BLASTP search failed with exit code {result.returncode}")
 
             columns = [BLAST_SPECIFIERS[key] for key in rest if key in BLAST_SPECIFIERS]
-            df = pd.read_csv(output_file_path, sep="\t", header=None, names=columns)
-            formatted_results = tabulate(
-                df,
-                headers=columns,
-                tablefmt="pretty",
-            )
+            if len(columns) > 0:
+                df = pd.read_csv(output_file_path, sep="\t", header=None, names=columns)
+                formatted_results = tabulate(
+                    df,
+                    headers=columns,
+                    tablefmt="pretty",
+                )
+            else:
+                df = pd.read_csv(output_file_path, sep="\t", header=None)
+                formatted_results = tabulate(
+                    df,
+                    tablefmt="pretty",
+                )
 
             return f"""
             BLASTP Search Completed Successfully!

@@ -26,11 +26,13 @@ SOFTWARE.
 
 import logging
 import os
+import random
 import subprocess
 import tempfile
 from abc import ABC, abstractmethod
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -146,6 +148,7 @@ Example Usage:
 # Running MD simulation starting with minimization, followed by NVT and NPT equilibration
 (
     protein_strcuture.pdb,
+    experiment_id,                          #  A unique identifier for this run (optional). If not provided to not pass this argument.
     stages=['minimization', 'nvt', 'npt'],  # Running the three stages sequentially, Default is ['minimization]
     minimization={'nsteps': 100},            # Modifying the 'nsteps' parameter for minimization stage. Default is {}.
     nvt={'nsteps': 5000},            # Modifying the 'nsteps' parameter for nvt stage. Default is {}.
@@ -276,12 +279,14 @@ class SimulationStage(ABC):
 class GenericSimulationStage(SimulationStage):
     """Generic simulation stage that can be used for minimization, NVT, and NPT."""
 
-    def run(self, input_file: Path, **kwargs) -> Path:
+    def run(self, input_file: Path, output_dir: Path, **kwargs) -> Path:
         """
         Run the simulation stage.
 
         Args:
             input_file: Path to the input file.
+            output_dir: Directory where the output for this stage will be stored.
+            kwargs: Additional keyword arguments to update the MDP file.
 
         Returns:
             Path to the output file.
@@ -293,15 +298,14 @@ class GenericSimulationStage(SimulationStage):
         else:
             mdp_file = SIMULATION_SETTINGS.get_mdp_path(self.stage_name)
 
-        output_dir = getattr(SIMULATION_SETTINGS, f"{self.stage_name}_dir")
-
         subprocess.run(
             [
                 "bash",
-                SIMULATION_SETTINGS.get_sh_path(self.stage_name),
+                str(SIMULATION_SETTINGS.get_sh_path(self.stage_name)),
                 str(input_file),
                 str(output_dir),
                 str(mdp_file),
+                str(SIMULATION_SETTINGS.gromacs_path),
             ],
             check=True,
         )
@@ -395,6 +399,7 @@ class MDSimulation(BiocatalysisAssistantBaseTool):
         self,
         pdb_file: Path,
         stages: List[str] = ["minimization", "nvt", "npt"],
+        experiment_id: Optional[str] = None,
         **kwargs,
     ) -> str:
         """
@@ -403,6 +408,7 @@ class MDSimulation(BiocatalysisAssistantBaseTool):
         Args:
             pdb_file: Path to the input PDB file.
             stages: List of simulation stages to run.
+            experiment_id: A unique identifier for this run. If None, generate one based on timestamp + random number.
 
         Returns:
             String describing the simulation outcome.
@@ -414,11 +420,24 @@ class MDSimulation(BiocatalysisAssistantBaseTool):
             preprocessed_file = self.preprocess_structure(pdb_file)
             input_file = preprocessed_file
 
+            if experiment_id is None:
+                experiment_id = (
+                    datetime.now().strftime("%Y%m%d_%H%M%S") + f"_{random.randint(1000,9999)}"
+                )
+
+            experiment_folder = SIMULATION_SETTINGS.simulations_dir / experiment_id
+            experiment_folder.mkdir(parents=True, exist_ok=True)
+
             for stage_name in stages:
+                stage_output_dir = experiment_folder / stage_name
+                stage_output_dir.mkdir(parents=True, exist_ok=True)
+
                 stage = GenericSimulationStage(
                     kwargs.get(stage_name, {}), stage_name, MDPFileUpdater()
                 )
-                input_file = stage.run(input_file, **kwargs.get(stage_name, {}))
+                input_file = stage.run(
+                    input_file, output_dir=stage_output_dir, **kwargs.get(stage_name, {})
+                )
 
             return f"MD simulation completed successfully. Final output: {input_file}"
 

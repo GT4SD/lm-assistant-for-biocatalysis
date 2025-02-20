@@ -5,11 +5,11 @@ INPUT_FILE=$1
 NVT_DIR=$2
 MDP_FILE=$3
 
+# GROMACS executable
+GMX=$4
+
 # Get the current directory
 CURRENT_DIR=$(pwd)
-
-# GROMACS executable
-GMX=gmx
 
 # Change to NVT equilibration directory
 cd $NVT_DIR
