@@ -275,7 +275,7 @@ class OptimizeEnzymeSequences(BiocatalysisAssistantBaseTool):
         paths_to_check = [
             settings.tool_dir,
             settings.tool_dir / "models",
-            settings.tool_dir / "output",
+            settings.cache_dir,
         ]
 
         for path in paths_to_check:

@@ -106,7 +106,7 @@ if $RUN_MC_SETUP; then
     else
         echo "Minio Client (mc) is already installed, skipping installation"
     fi
-    mc alias set gt4sd-public-cos https://s3.par01.cloud-object-storage.appdomain.cloud 6e9891531d724da89997575a65f4592e 5997d63c4002cc04e13c03dc0c2db9dae751293dab106ac5
+    mc alias set gt4sd-public-cos https://s3.par01.cloud-object-storage.appdomain.cloud b087e6810a5d4246a64e07e36ace338f ba4a1db5647a32c6109b58714befb7ea7145b983143e0836
     if [ ! -d "${ENZYME_OPTIMIZATION_CACHE_DIR}/kcat" ] || [ -z "$(ls -A "${ENZYME_OPTIMIZATION_CACHE_DIR}/kcat")" ]; then
         mc mirror --overwrite gt4sd-public-cos/gt4sd-cos-properties-artifacts/proteins/enzeptional/scorers/kcat/ "${ENZYME_OPTIMIZATION_CACHE_DIR}/kcat/"
     else
