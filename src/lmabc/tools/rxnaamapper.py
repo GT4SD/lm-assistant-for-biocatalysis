@@ -53,15 +53,13 @@ class RXNAAMapperConfiguration(BaseSettings):
     """
 
     vocabulary_file: str = str(
-        BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("rxnaamapper") / "vocabulary.txt"
+        BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_dir("rxnaamapper") / "vocabulary.txt"
     )
     aa_sequence_tokenizer_filepath: str = str(
-        BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("rxnaamapper") / "tokenizer.json"
+        BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_dir("rxnaamapper") / "tokenizer.json"
     )
     aa_sequence_tokenizer_type: str = "generic"
-    model_path: str = str(
-        BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("rxnaamapper") / "model"
-    )
+    model_path: str = str(BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_dir("rxnaamapper") / "model")
     head: int = 3
     layers: List[int] = [11]
     top_k: int = 1

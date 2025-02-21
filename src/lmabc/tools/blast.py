@@ -33,6 +33,7 @@ from pathlib import Path
 from typing import Any, List, Optional
 
 import pandas as pd
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from tabulate import tabulate
 
@@ -53,15 +54,19 @@ class BlastpSettings(BaseSettings):
         evalue: The E-value threshold for reporting matches.
         outfmt: The output format.
         max_target_seqs: The maximum number of aligned sequences to keep.
-        trash_dir: Directory to store temporary files like the FASTA query and BLAST output.
+        cache_dir: Directory to store temporary files like the FASTA query and BLAST output.
     """
 
-    db: Path = BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("blast") / "blastdb"
+    db: Path = BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_dir("blast") / "blastdb"
 
     evalue: float = 1e-5
     outfmt: str = "6 sseqid pident evalue bitscore stitle sseq"
     max_target_seqs: int = 5
-    trash_dir: Path = BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("blast") / "blast_logs"
+    cache_dir: Path = Field(
+        default_factory=lambda: BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_cache_dir("blast")
+        / "blast_logs",
+        description="Cache directory",
+    )
 
     model_config = SettingsConfigDict(env_prefix="BLASTP_")
 
@@ -145,9 +150,11 @@ class Blastp(BiocatalysisAssistantBaseTool):
         if not Path(settings.db).parent.exists():
             logger.warning(f"Database directory {Path(settings.db).parent} does not exist.")
             return False
-        if not settings.trash_dir.exists():
-            logger.warning(f"Trash directory {settings.trash_dir} does not exist.")
-            return False
+        if not settings.cache_dir.exists():
+            logger.warning(
+                f"Cache directory {settings.cache_dir} does not exist. Creating it now..."
+            )
+            settings.cache_dir.mkdir(parents=True, exist_ok=True)
         return True
 
     def _run(
@@ -193,14 +200,14 @@ class Blastp(BiocatalysisAssistantBaseTool):
             raise ValueError("Invalid arguments, please check your inputs")
 
         try:
-            settings.trash_dir.mkdir(parents=True, exist_ok=True)
+            settings.cache_dir.mkdir(parents=True, exist_ok=True)
 
             if experiment_id is None:
                 experiment_id = (
                     datetime.now().strftime("%Y%m%d_%H%M%S") + f"_{random.randint(1000,9999)}"
                 )
 
-            experiment_folder = settings.trash_dir / experiment_id
+            experiment_folder = settings.cache_dir / experiment_id
             experiment_folder.mkdir(parents=True, exist_ok=True)
 
             fasta_file_path = experiment_folder / "query.fasta"
@@ -209,9 +216,7 @@ class Blastp(BiocatalysisAssistantBaseTool):
             with fasta_file_path.open("w") as fasta_file:
                 fasta_file.write(f">query_sequence\n{query}\n")
 
-            blastdb_path = (
-                BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("blast") / "blastdb"
-            )
+            blastdb_path = BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_dir("blast") / "blastdb"
 
             if database_name is None:
                 database_name = "swissprot"

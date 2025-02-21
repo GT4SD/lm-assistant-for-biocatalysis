@@ -28,6 +28,7 @@ import logging
 from pathlib import Path
 
 import requests
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from rcsbsearchapi.search import SequenceQuery
 
@@ -41,7 +42,10 @@ logger.addHandler(logging.NullHandler())
 class PDBConfiguration(BaseSettings):
     """Configuration values for the PDB tool."""
 
-    output_dir: str = str(BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("pdb"))
+    cache_dir: Path = Field(
+        default_factory=lambda: Path(BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_dir("pdb")),
+        description="Cache directory.",
+    )
     evalue_cutoff: int = 1
     identity_cutoff: float = 1
 
@@ -120,9 +124,9 @@ class DownloadPDBStructure(BiocatalysisAssistantBaseTool):
         Returns:
             True if all required directories exist, False otherwise.
         """
-        output_dir = Path(PDB_SETTINGS.output_dir)
-        if not output_dir.exists():
-            logger.warning(f"Required directory {output_dir} does not exist.")
+        cache_dir = Path(PDB_SETTINGS.cache_dir)
+        if not cache_dir.exists():
+            logger.warning(f"Required directory {cache_dir} does not exist.")
             return False
         return True
 
@@ -145,7 +149,7 @@ class DownloadPDBStructure(BiocatalysisAssistantBaseTool):
             response = requests.get(url)
 
             if response.status_code == 200:
-                output_path = Path(PDB_SETTINGS.output_dir) / f"{pdb_code}.pdb"
+                output_path = Path(PDB_SETTINGS.cache_dir) / f"{pdb_code}.pdb"
                 with output_path.open("wb") as f:
                     f.write(response.content)
                 return f"Successfully downloaded PDB file: {output_path}"

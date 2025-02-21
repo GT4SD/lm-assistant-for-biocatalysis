@@ -30,7 +30,7 @@ from typing import Dict, List, Tuple, cast
 
 from Bio.PDB import PDBParser, Superimposer
 from Bio.SeqUtils import seq1
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from ..configuration import BIOCATALYSIS_AGENT_CONFIGURATION
@@ -44,9 +44,20 @@ logger.addHandler(logging.NullHandler())
 class MutagenesisConfiguration(BaseSettings):
     """Configuration values for the Mutagenesis tool."""
 
-    output_dir: Path = BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("mutagenesis")
-    clean_pdb_dir: Path = output_dir / "clean_pdb"
-    mutated_pdb_dir: Path = output_dir / "mutated_pdb"
+    cache_dir: Path = Field(
+        default_factory=lambda: Path(
+            BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_cache_dir("mutagenesis")
+        ),
+        description="Cache directory.",
+    )
+    clean_pdb: Path = Field(
+        default=BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_dir("mutagenesis") / "clean_pdb",
+        description="Clean PDB path.",
+    )
+    mutated_pdb: Path = Field(
+        default=BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_dir("mutagenesis") / "mutated_pdb",
+        description="Mutated PDB path.",
+    )
     pymol_path: str = "pymol"
     alignment_threshold: float = 0.5
     model_config = SettingsConfigDict(env_prefix="MUTAGENESIS_")
@@ -99,9 +110,9 @@ class Mutagenesis(BiocatalysisAssistantBaseTool):
 
             _ = cmd  # Ensure PyMOL is importable
             for path in [
-                MUTAGENESIS_SETTINGS.output_dir,
-                MUTAGENESIS_SETTINGS.clean_pdb_dir,
-                MUTAGENESIS_SETTINGS.mutated_pdb_dir,
+                MUTAGENESIS_SETTINGS.cache_dir,
+                MUTAGENESIS_SETTINGS.clean_pdb,
+                MUTAGENESIS_SETTINGS.mutated_pdb,
             ]:
                 path.mkdir(parents=True, exist_ok=True)
             return True
@@ -123,7 +134,7 @@ class Mutagenesis(BiocatalysisAssistantBaseTool):
         Returns:
             Path to the local PDB file.
         """
-        local_path = Path(PDB_SETTINGS.output_dir) / f"{pdb_code}.pdb"
+        local_path = Path(PDB_SETTINGS.cache_dir) / f"{pdb_code}.pdb"
         if not local_path.exists():
             logger.info(f"Downloading PDB structure: {pdb_code}")
             DownloadPDBStructure()._run(pdb_code=pdb_code)
@@ -297,7 +308,7 @@ class Mutagenesis(BiocatalysisAssistantBaseTool):
             _, original_sequence = self.extract_full_sequence(pdb_file)
             mutations = self.find_mutations(original_sequence, target_sequence)
 
-            output_file = MUTAGENESIS_SETTINGS.mutated_pdb_dir / f"{pdb_code}_mutated.pdb"
+            output_file = MUTAGENESIS_SETTINGS.mutated_pdb / f"{pdb_code}_mutated.pdb"
             self.perform_mutations(pdb_file, mutations, output_file)
 
             result = f"Mutations performed: {', '.join(mutations)}. Mutated structure saved to: {output_file}."

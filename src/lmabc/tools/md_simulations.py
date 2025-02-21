@@ -48,53 +48,51 @@ class SimulationConfiguration(BaseSettings):
     """Configuration values for the MDSimulation tool."""
 
     tool_dir: Path = Field(
-        default_factory=lambda: BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path(
-            "molecular_dynamics"
-        ),
+        default_factory=lambda: BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_dir("molecular_dynamics"),
         description="Root directory for simulations.",
     )
     gromacs_path: Path = Field(
         default_factory=lambda: Path(os.getenv("GROMACS_PATH", "/usr/local/gromacs/bin/gmx")),
         description="Path to GROMACS. Can be set via the 'GROMACS_PATH' environment variable.",
     )
-    simulations_dir: Path = Field(
+    cache_dir: Path = Field(
         default_factory=lambda: Path(
-            BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("molecular_dynamics")
+            BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_cache_dir("molecular_dynamics")
         )
         / "simulations",
-        description="Simulations directory.",
+        description="Cache directory.",
     )
     minimization_dir: Path = Field(
         default_factory=lambda: Path(
-            BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("molecular_dynamics")
+            BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_dir("molecular_dynamics")
         )
         / "simulations/minimization",
         description="Minimization directory.",
     )
     nvt_dir: Path = Field(
         default_factory=lambda: Path(
-            BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("molecular_dynamics")
+            BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_dir("molecular_dynamics")
         )
         / "simulations/nvt",
         description="NVT directory.",
     )
     npt_dir: Path = Field(
         default_factory=lambda: Path(
-            BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("molecular_dynamics")
+            BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_dir("molecular_dynamics")
         )
         / "simulations/npt",
         description="NPT directory.",
     )
     mdp_dir: Path = Field(
         default_factory=lambda: Path(
-            BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("molecular_dynamics")
+            BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_dir("molecular_dynamics")
         )
         / "mdp_files",
         description="MDP files directory.",
     )
     run_dir: Path = Field(
         default_factory=lambda: Path(
-            BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("molecular_dynamics")
+            BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_dir("molecular_dynamics")
         )
         / "run_files",
         description="Shell script files directory.",
@@ -250,12 +248,13 @@ class SimulationStage(ABC):
         self.mdp_updater = mdp_updater
 
     @abstractmethod
-    def run(self, input_file: Path, **kwargs) -> Path:
+    def run(self, input_file: Path, output_dir: Path, **kwargs) -> Path:
         """
         Run the simulation stage.
 
         Args:
             input_file: Path to the input file.
+            output_dir: Output directory.
 
         Returns:
             Path to the output file.
@@ -286,7 +285,6 @@ class GenericSimulationStage(SimulationStage):
         Args:
             input_file: Path to the input file.
             output_dir: Directory where the output for this stage will be stored.
-            kwargs: Additional keyword arguments to update the MDP file.
 
         Returns:
             Path to the output file.
@@ -335,7 +333,7 @@ class MDSimulation(BiocatalysisAssistantBaseTool):
                 SIMULATION_SETTINGS.tool_dir,
                 SIMULATION_SETTINGS.mdp_dir,
                 SIMULATION_SETTINGS.run_dir,
-                SIMULATION_SETTINGS.simulations_dir,
+                SIMULATION_SETTINGS.cache_dir,
                 SIMULATION_SETTINGS.minimization_dir,
                 SIMULATION_SETTINGS.nvt_dir,
                 SIMULATION_SETTINGS.npt_dir,
@@ -425,7 +423,7 @@ class MDSimulation(BiocatalysisAssistantBaseTool):
                     datetime.now().strftime("%Y%m%d_%H%M%S") + f"_{random.randint(1000,9999)}"
                 )
 
-            experiment_folder = SIMULATION_SETTINGS.simulations_dir / experiment_id
+            experiment_folder = SIMULATION_SETTINGS.cache_dir / experiment_id
             experiment_folder.mkdir(parents=True, exist_ok=True)
 
             for stage_name in stages:

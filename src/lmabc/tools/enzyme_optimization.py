@@ -68,8 +68,14 @@ class EnzeptinalConfiguration(BaseSettings):
     top_k: int = Field(default=2, description="Top K sequences to consider.")
     selection_ratio: float = Field(default=0.25, description="Selection ratio for optimization.")
     tool_dir: Path = Field(
-        default=BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("enzyme_optimization"),
-        description="Output directory.",
+        default=BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_dir("enzyme_optimization"),
+        description="Tool directory.",
+    )
+    cache_dir: Path = Field(
+        default_factory=lambda: BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_cache_dir(
+            "enzyme_optimization"
+        ),
+        description="Cache directory",
     )
     output_filename: str = Field(
         default="OptimizationOutput.json", description="Filename of the output file."
@@ -358,7 +364,7 @@ class OptimizeEnzymeSequences(BiocatalysisAssistantBaseTool):
             if not optimized_sequences:
                 return "No improved sequences found."
 
-            filename: Path = config.tool_dir / "output" / config.output_filename
+            filename: Path = config.cache_dir / "output" / config.output_filename
             self._save_results(results=optimized_sequences, filename=filename)
 
             df = pd.read_json(f"{filename}", orient="records", lines=True).head(number_of_results)

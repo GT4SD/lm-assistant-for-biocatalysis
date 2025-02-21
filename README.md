@@ -1,10 +1,12 @@
+Below is the updated README in Markdown format with the BLASTP installation note removed:
+
+---
+
 # Biocatalysis Assistant
 
 ![Biocatalysis Assistant Architecture](/assets/GraphicalAbstract.png)
 
 **Biocatalysis Assistant** is an advanced Python-based chatbot framework designed to automate and facilitate bioinformatics and biocatalysis tasks. Leveraging a dynamic set of tools and integrating powerful language models, this assistant streamlines complex processes in computational biology and enzyme engineering, making research more efficient and accessible.
-
-
 
 ## Features
 
@@ -33,10 +35,6 @@ The Biocatalysis Assistant integrates several powerful tools to assist in variou
 ### Prerequisites
 
 - **Python**: Version 3.10 or higher. [Download Python](https://www.python.org/downloads/)
-
-To use all the supported tools, install the following on your system:
-
-- **BLASTP**: NCBI BLAST+ toolkit. [Download BLASTP](https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/)
 - **PyMOL**: Molecular visualization system. [Install PyMOL via Conda](https://pymol.org/2/#download)
 - **GROMACS**: Molecular dynamics package. [Install GROMACS](https://manual.gromacs.org/documentation/current/install-guide/index.html)
 
@@ -56,38 +54,45 @@ To use all the supported tools, install the following on your system:
    poetry install
    ```
 
-3. **Setup molecular dynamics file, the rxnaamapper and enzyme optimization models**
+3. **Setup Molecular Dynamics Files, RXNAAMapper, Enzyme Optimization Models, and BLAST Databases**
+
+    The setup script now supports a new `--blastdb` option to control which BLAST database(s) to download:
+    
+    - **Default Behavior:** If no `--blastdb` option is provided, only the Swissprot database is downloaded.
+    - **Custom Database:** Pass a specific BLAST database name (e.g., `nr`) to download that database.
+    - **All Databases:** Pass `all` to download a predefined set of BLAST databases (swissprot, nr, nt, refseq_protein, refseq_rna, pdb).
+    
     Choose one of the following options based on your operating system:
-
+    
     a) For macOS users with Homebrew:
+    
     ```bash
-    bash tools_setup/setup.sh
+    bash tools_setup/setup.sh --blastdb <db_name|all>
     ```
-
-    b) For users on other operating systems or without Homebrew:
+    
+    b) For users on other operating systems or without Homebrew (skip Minio Client installation):
+    
     ```bash
-    bash tools_setup/setup.sh --skip-mc
+    bash tools_setup/setup.sh --skip-mc --blastdb <db_name|all>
     ```
 
     The script performs the following actions:
 
-    (i) **RXNAAMapper Setup**
-         - Sets up thea BERT model, a tokenizer and vocabulary
+    - **RXNAAMapper Setup**
+         - Sets up the BERT model, tokenizer, and vocabulary.
+    - **Minio Client (mc) Setup** (unless skipped via `--skip-mc`)
+         - Installs Minio Client using Homebrew.
+         - Configures Minio Client with predefined credentials.
+    - **Enzyme Optimization Models Setup**
+         - Downloads and sets up models for enzyme optimization (requires Minio).
+    - **BLAST+ Installation and Database Setup**
+         - Installs BLAST+ if not already installed.
+         - Downloads the specified BLAST database(s) based on the `--blastdb` option.
 
-    (ii) **Minio Client (mc) Setup** (skipped if using `--skip-mc`)
-         - Installs Minio Client using Homebrew
-         - Configures Minio Client with predefined credentials
-
-    (iii) **Enzyme Optimization Models Setup**
-         - Downloads and sets up models for enzyme optimization (Minio needed)
-
-    
-
-    **Note:** - If you're not using macOS or don't have Homebrew, use the `--skip-mc` option and manually install Minio Client appropriate for your operating system.
+    **Note:** If you're not using macOS or don't have Homebrew, use the `--skip-mc` option and manually install Minio Client for your operating system.
 
 4. **Install Additional Required Tools**
 
-   - **BLASTP**
    - **PyMOL**
    - **GROMACS**
 
@@ -122,8 +127,11 @@ To start the Biocatalysis Assistant using the CLI:
 
 ```bash
 lmabc --help
+```
 
+This displays a help message similar to:
 
+```
 Biocatalysis Assistant CLI Help
 
 DESCRIPTION:
@@ -170,23 +178,22 @@ To run the Biocatalysis Assistant using the Streamlit web interface:
 lmabc-app
 ```
 
-This command starts the Streamlit server and automatically opens the web application in your default browser. If it doesn't open automatically, the terminal will display a local URL you can copy and paste into your browser.
+This starts the Streamlit server and automatically opens the web application in your default browser. If it doesn't open automatically, the terminal will display a local URL you can copy and paste into your browser.
 
 The Streamlit app provides a user-friendly interface with:
-- A chat-like interaction on the home page
-- A list of available tools
-- Settings for customizing the assistant's configuration
+- A chat-like interaction on the home page.
+- A list of available tools.
+- Settings for customizing the assistant's configuration.
 
 ![Biocatalysis Assistant Homepage](/assets/Homepage.png)
 
 Choose the interface that best fits your workflow and preferences. Both interfaces interact with the same underlying Biocatalysis Assistant, ensuring consistent functionality and results.
 
-
 ## References
 
 If you use `lmabc` in your projects, please consider citing the following:
 
-```bib
+```bibtex
 @software{LMABC,
   author = {Yves Gaetan Nana Teukam, Francesca Grisoni, Matteo Manica},
   month = {10},
@@ -205,3 +212,5 @@ For individual model usage, please refer to the model licenses found in the orig
 ## Support
 
 For issues or questions, please [open an issue](https://github.com/GT4SD/lm-assistant-for-biocatalysis/issues) in the GitHub repository.
+
+---
