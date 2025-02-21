@@ -1,7 +1,3 @@
-Below is the updated README in Markdown format with the BLASTP installation note removed:
-
----
-
 # Biocatalysis Assistant
 
 ![Biocatalysis Assistant Architecture](/assets/GraphicalAbstract.png)
