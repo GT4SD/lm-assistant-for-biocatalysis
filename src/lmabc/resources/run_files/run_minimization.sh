@@ -17,7 +17,7 @@ cd $MINIMIZATION_DIR
 # Step 1: Prepare the system with pdb2gmx
 cp $INPUT_FILE .
 
-$GMX pdb2gmx -f $INPUT_FILE -o processed.gro -water spce <<-EOF
+$GMX pdb2gmx -f $INPUT_FILE -o processed.gro -water spce -ignh <<-EOF
 15
 EOF
 

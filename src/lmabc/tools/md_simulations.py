@@ -372,23 +372,28 @@ class MDSimulation(BiocatalysisAssistantBaseTool):
     @staticmethod
     def preprocess_structure(input_file: Path) -> Path:
         """
-        Remove water, ligands, and other non-protein molecules from the input structure.
+        Select only the protein (polymer.protein) from the input structure
+        and save it to a new PDB file.
 
         Args:
             input_file: Path to the input PDB file.
 
         Returns:
-            Path to the preprocessed PDB file.
+            Path to the preprocessed (protein-only) PDB file.
         """
+        from pathlib import Path
+
         from pymol import cmd
 
         input_path = Path(input_file)
-
         output_file = input_path.parent / f"{input_path.stem}_protein_only.pdb"
 
         cmd.load(str(input_file), "structure")
-        cmd.remove("not polymer")
-        cmd.save(str(output_file), "structure")
+
+        cmd.select("protein", "polymer.protein")
+
+        cmd.save(str(output_file), "protein")
+
         cmd.delete("all")
 
         return output_file

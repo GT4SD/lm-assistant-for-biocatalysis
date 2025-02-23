@@ -74,7 +74,8 @@ class EnzeptinalConfiguration(BaseSettings):
     cache_dir: Path = Field(
         default_factory=lambda: BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_cache_dir(
             "enzyme_optimization"
-        ),
+        )
+        / "output",
         description="Cache directory",
     )
     output_filename: str = Field(
@@ -266,9 +267,11 @@ class OptimizeEnzymeSequences(BiocatalysisAssistantBaseTool):
     def check_requirements() -> bool:
         """
         Check if the required directories and files for enzyme optimization exist.
+        If a required directory does not exist, attempt to create it.
 
         Returns:
-            True if all required directories and files exist, False otherwise.
+            True if all required directories exist or were successfully created,
+            False if any directory creation fails.
         """
         settings = ENZEPTIONAL_SETTINGS
 
@@ -281,7 +284,11 @@ class OptimizeEnzymeSequences(BiocatalysisAssistantBaseTool):
         for path in paths_to_check:
             if not path.exists():
                 logger.warning(f"Directory {path} does not exist. Creating it now.")
-                path.mkdir(parents=True, exist_ok=True)
+                try:
+                    path.mkdir(parents=True, exist_ok=True)
+                except Exception as e:
+                    logger.error(f"Could not create directory {path}: {e}")
+                    return False
 
         return True
 
@@ -364,7 +371,7 @@ class OptimizeEnzymeSequences(BiocatalysisAssistantBaseTool):
             if not optimized_sequences:
                 return "No improved sequences found."
 
-            filename: Path = config.cache_dir / "output" / config.output_filename
+            filename: Path = config.cache_dir / config.output_filename
             self._save_results(results=optimized_sequences, filename=filename)
 
             df = pd.read_json(f"{filename}", orient="records", lines=True).head(number_of_results)

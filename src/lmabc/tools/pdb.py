@@ -43,7 +43,7 @@ class PDBConfiguration(BaseSettings):
     """Configuration values for the PDB tool."""
 
     cache_dir: Path = Field(
-        default_factory=lambda: Path(BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_dir("pdb")),
+        default_factory=lambda: Path(BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_cache_dir("pdb")),
         description="Cache directory.",
     )
     evalue_cutoff: int = 1
@@ -64,6 +64,23 @@ class FindPDBStructure(BiocatalysisAssistantBaseTool):
     Given a protein sequence, FindPDBStructure uses RCSB Search API to find protein structures (also known as PDB structures or 3D structures) related to a given protein sequence.
     It takes as input a protein sequence.
     """
+
+    @staticmethod
+    def check_requirements() -> bool:
+        """
+        Check if the required directories for PDB file download exist.
+        Returns:
+            True if all required directories exist, False otherwise.
+        """
+        cache_dir = Path(PDB_SETTINGS.cache_dir)
+        if not cache_dir.exists():
+            logger.warning(f"Directory {cache_dir} does not exist. Creating it now.")
+            try:
+                cache_dir.mkdir(parents=True, exist_ok=True)
+            except Exception as e:
+                logger.error(f"Could not create directory {cache_dir}: {e}")
+                return False
+        return True
 
     def _run(self, protein_sequence: str) -> str:
         """Run FindPDBStructure."""
@@ -126,8 +143,12 @@ class DownloadPDBStructure(BiocatalysisAssistantBaseTool):
         """
         cache_dir = Path(PDB_SETTINGS.cache_dir)
         if not cache_dir.exists():
-            logger.warning(f"Required directory {cache_dir} does not exist.")
-            return False
+            logger.warning(f"Directory {cache_dir} does not exist. Creating it now.")
+            try:
+                cache_dir.mkdir(parents=True, exist_ok=True)
+            except Exception as e:
+                logger.error(f"Could not create directory {cache_dir}: {e}")
+                return False
         return True
 
     def _run(self, pdb_code: str) -> str:
