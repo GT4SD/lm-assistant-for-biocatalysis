@@ -111,7 +111,7 @@ ENZEPTIONAL_DESCRIPTION = """ OptimizeEnzymeSequences (Enzeptional) - Enzyme Seq
     4. `scorer_type` (str) - The scoring model type, either `'feasibility'` (default) or `'kcat'`.
 
     Optional Parameters:
-    - `intervals` (List[List[int]]) - List of regions (start, end) to focus mutations on.
+    - `intervals` (List[List[int]]) - List of regions (start, end) to focus mutations on (e.g. important sites). Here is an example: [[1, 4], [20, 21], [50, 56]]
     - `num_iterations` (int) - Number of optimization iterations. Default: 2.
     - `num_sequences` (int) - Number of sequences optimized per iteration. Default: 5.
     - `num_mutations` (int) - Number of mutations per iteration. Default: 5.
@@ -137,8 +137,6 @@ ENZEPTIONAL_DESCRIPTION = """ OptimizeEnzymeSequences (Enzeptional) - Enzyme Seq
     | 1      | MVLSPADKTNVKAA...           | 0.9200 |
     | 2      | MVLAPADKTNVKAA...           | 0.8900 |
     | 3      | MVLSPADRTNVKAA...           | 0.8750 |
-    | 4      | MVLSAADRNVKAA...            | 0.8600 |
-    | 5      | MVLSPADRKVKAA...            | 0.8450 |
     +--------+-----------------------------+--------+
 
     Usage:
@@ -148,7 +146,8 @@ ENZEPTIONAL_DESCRIPTION = """ OptimizeEnzymeSequences (Enzeptional) - Enzyme Seq
         product_smiles="CCO",
         protein_sequence="MVLSPADKTNVKAA...",
         scorer_type="feasibility",
-        number_of_results=5,
+        number_of_results=5,   # optional
+        intervals=[[..., ...], [..., ...]]   # optional
         
     )
     ```

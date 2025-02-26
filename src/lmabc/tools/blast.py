@@ -98,11 +98,11 @@ class Blastp(BiocatalysisAssistantBaseTool):
         BLASTP Arguments:
         - `query`: The protein sequence as a string.
         - `experiment_id`: A unique identifier for this run (optional).
-        - `database_name`: The name of the BLAST database to use (default: `swissprot`).
-        - `evalue`: The E-value threshold for reporting matches (default: `1e-5`).
-        - `outfmt`: The output format (default: `6`).
-        - `max_target_seqs`: The maximum number of aligned sequences to keep (default: `10`).
-        - Additional BLASTP arguments can be passed as keyword arguments (e.g., `gapopen=11`).
+        - `database_name`: The name of the BLAST database to use (default: "swissprot").
+        - `evalue`: The E-value threshold for reporting matches (default: "1e-5").
+        - `outfmt`: The output format (default: "6 sseqid pident evalue bitscore stitle sseq").
+        - `max_target_seqs`: The maximum number of aligned sequences to keep (default: "10").
+        - Additional BLASTP arguments can be passed as keyword arguments (e.g., "gapopen=11").
         Only valid BLASTP arguments are accepted. Invalid arguments will raise an error.
 
         Example Usage:
@@ -111,7 +111,7 @@ class Blastp(BiocatalysisAssistantBaseTool):
             query="MY_PROTEIN_SEQUENCE",
             database_name="swissprot",
             evalue=1e-5,
-            outfmt=6,
+            outfmt="6 sseqid pident evalue bitscore stitle sseq",
             max_target_seqs=10,
             gapopen=11  # Additional valid BLASTP argument
         )

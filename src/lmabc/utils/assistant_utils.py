@@ -120,6 +120,7 @@ Follow these steps to reason and act effectively:
             "action_input": "I'm sorry, I cannot answer that question with the information available."
         }}
         ```
+    in both cases the content of "action_input" can only be a string!
 
 
 Strictly answer to the question asked. Do not over analysed things!. Begin!

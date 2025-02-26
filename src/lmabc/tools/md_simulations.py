@@ -58,8 +58,7 @@ class SimulationConfiguration(BaseSettings):
     cache_dir: Path = Field(
         default_factory=lambda: Path(
             BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_cache_dir("molecular_dynamics")
-        )
-        / "simulations",
+        ),
         description="Cache directory.",
     )
     minimization_dir: Path = Field(
@@ -145,7 +144,7 @@ To run the MDSimulation Tool, the user prepares a PDB file (protein structure) a
 Example Usage:
 # Running MD simulation starting with minimization, followed by NVT and NPT equilibration
 (
-    protein_strcuture.pdb,
+    protein_strcuture.pdb,                  # Full pdb path!
     experiment_id,                          #  A unique identifier for this run (optional). If not provided to not pass this argument.
     stages=['minimization', 'nvt', 'npt'],  # Running the three stages sequentially, Default is ['minimization]
     minimization={'nsteps': 100},            # Modifying the 'nsteps' parameter for minimization stage. Default is {}.

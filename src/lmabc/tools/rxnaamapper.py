@@ -81,6 +81,9 @@ class ExtractBindingSites(BiocatalysisAssistantBaseTool):
     Input Format:
         - Reaction SMILES must follow this structure: substrate SMILES | amino acid sequence >> product SMILES
         - Example:  CC(=O)Cc1ccccc1|MTENALVR>>CC(O)Cc1ccccc1
+
+    Output Format (string):
+        The binding sites are: 0-1, 20-24, 34-36
 """
 
     @staticmethod
