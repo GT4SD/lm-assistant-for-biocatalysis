@@ -1,76 +1,93 @@
-[tool.poetry]
+[project]
 name = "lm-assistant-for-biocatalysis"
 version = "0.0.1"
 description = "This project focuses on streamlining and automating key tasks in protein modeling, optimization, and the design of experiments for biocatalyzed reactions."
-authors = [" Y.G. Nana Teukam <yves.g.nana@zgmail.com>"]
+authors = [{ name = " Y.G. Nana Teukam", email = "yves.g.nana@zgmail.com" }]
+requires-python = ">=3.10,<3.12"
 readme = "README.md"
-packages = [{include = "lmabc", from="src"}]
+dependencies = [
+    "tqdm>=4.25.0,<5",
+    "python-dotenv>=1.0.1,<2",
+    "ipykernel>=6.29.5,<7",
+    "pydantic-settings>=2.4.0,<3",
+    "biopython~=1.84",
+    "rdkit>=2024.3.5,<2025",
+    "loguru>=0.7.2,<0.8",
+    "streamlit==1.33",
+    "colorama>=0.4.6,<0.5",
+    "rxn-aa-mapper",
+    "langchain-unstructured>=0.1.2,<0.2",
+    "unstructured>=0.15.9,<0.16",
+    "requests>=2.32.3,<3",
+    "types-requests>=2.32.0.20240907,<3",
+    "rcsbsearchapi>=1.6.0,<2",
+    "protobuf==3.20.3",
+    "importlib-resources>=6.4.5,<7",
+    "langchain-ibm>=0.3.1,<0.4",
+    "langchain>=0.3.3,<0.4",
+    "langchain-community>=0.3.2,<0.4",
+    "langchain-huggingface>=0.1.0,<0.2",
+    "enzeptional>=1.0.4,<2",
+    "bitsandbytes==0.42.0",
+    "langchain-ollama>=0.2.0,<0.3",
+    "pandas>=2.0.0,<3",
+    "click>=8.1.8,<9",
+    "transformers==4.46.3",
+    "types-tabulate>=0.9.0.20241207,<0.10",
+]
+
+[project.scripts]
+lmabc = "lmabc.cli:main"
+lmabc-app = "lmabc.app.launcher:main"
+
+[dependency-groups]
+dev = [
+    "jupyter>=1.0.0,<2",
+    "mypy>=1.0.0,<2",
+    "pytest>=7.4.4,<8",
+    "pytest-cov>=5.0.0,<6",
+    "ruff>=0.1.3,<0.2",
+    "types-setuptools>=57.4.14,<58",
+]
+
+[tool.poetry_bumpversion.file."src/lmabc/__init__.py"]
+
+[tool.uv]
+
+[[tool.uv.index]]
+name = "PyPI"
+url = "https://pypi.org/simple/"
+default = true
+
+[tool.uv.sources]
+rxn-aa-mapper = { git = "https://github.com/rxn4chemistry/rxnaamapper.git" }
+
+[tool.hatch.build.targets.sdist]
 include = [
+    "src/lmabc",
     "lmabc/py.typed",
     "resources/*",
     "resources/*/*",
     "assets/*",
-    "tools_setup/*"
-    ]
+    "tools_setup/*",
+]
 
-[tool.poetry_bumpversion.file."src/lmabc/__init__.py"]
+[tool.hatch.build.targets.wheel]
+include = [
+    "src/lmabc",
+    "lmabc/py.typed",
+    "resources/*",
+    "resources/*/*",
+    "assets/*",
+    "tools_setup/*",
+]
 
-[[tool.poetry.source]]
-name = "PyPI"
-priority = "primary"
-
-[tool.poetry.dependencies]
-python = ">=3.10,<3.12"
-tqdm = "^4.25.0"
-# For extras
-
-# For internal packages
-# internal-package = { version = "^0.0.1", source = "internal_private" }
-python-dotenv = "^1.0.1"
-
-ipykernel = "^6.29.5"
-pydantic-settings = "^2.4.0"
-biopython = "^1.84"
-rdkit = "^2024.3.5"
-loguru = "^0.7.2"
-streamlit = "1.33"
-colorama = "^0.4.6"
-rxn-aa-mapper = {git = "https://github.com/rxn4chemistry/rxnaamapper.git"}
-langchain-unstructured = "^0.1.2"
-unstructured = "^0.15.9"
-requests = "^2.32.3"
-types-requests = "^2.32.0.20240907"
-rcsbsearchapi = "^1.6.0"
-protobuf = "3.20.3"
-importlib-resources = "^6.4.5"
-langchain-ibm = "^0.3.1"
-langchain = "^0.3.3"
-langchain-community = "^0.3.2"
-langchain-huggingface = "^0.1.0"
-enzeptional = "^1.0.4"
-bitsandbytes = "0.42.0"
-accelerate = "^1.0.1"
-langchain-ollama = "^0.2.0"
-pandas = "^2.0.0"
-click = "^8.1.8"
-transformers = "4.46.3"
-types-tabulate = "^0.9.0.20241207"
-
-[tool.poetry.scripts]
-lmabc = "lmabc.cli:main"
-lmabc-app = "lmabc.app.launcher:main"
-
-[tool.poetry.group.dev.dependencies]
-jupyter = "^1.0.0"
-mypy = "^1.0.0"
-pytest = "^7.4.4"
-pytest-cov = "^5.0.0"
-ruff = "^0.1.3"
-types-setuptools = "^57.4.14"
+[tool.hatch.build.targets.wheel.sources]
+"src/lmabc" = "lmabc"
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [tool.mypy]
 check_untyped_defs = true

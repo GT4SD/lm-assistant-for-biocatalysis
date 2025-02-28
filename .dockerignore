@@ -1,0 +1,47 @@
+# Exclude Git-related files and directories
+.git
+.gitignore
+.github/
+
+# Exclude Python cache and virtual environment files
+__pycache__/
+*.py[cod]
+*.so
+.Python
+.env/
+.venv/
+venv/
+ENV/
+env/
+
+# Exclude build and distribution directories
+build/
+dist/
+*.egg-info/
+*.egg
+*.whl
+
+# Exclude IDE and editor-specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Exclude logs and local development files
+logs/
+*.log
+*.sqlite3
+
+# Exclude test and documentation files
+tests/
+test/
+docs/
+doc/
+coverage.xml
+.tox/
+
+# Exclude macOS-specific files
+.DS_Store
+
+# Exclude Jupyter Notebook checkpoints
+.ipynb_checkpoints/

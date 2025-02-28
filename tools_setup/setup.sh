@@ -47,53 +47,53 @@ print_header() {
     echo -e "\n${BLUE}==== $1 ====${NC}\n"
 }
 
-LMABC_LOCAL_CACHE_PATH="${LMABC_LOCAL_CACHE_PATH:-$HOME/.lmabc/}"
-RXNAAMAPPER_CACHE_DIR="${LMABC_LOCAL_CACHE_PATH}/rxnaamapper"
-ENZYME_OPTIMIZATION_CACHE_DIR="${LMABC_LOCAL_CACHE_PATH}/enzyme_optimization/models"
-MOLECULAR_DYNAMICS_MDP_CACHE_DIR="${LMABC_LOCAL_CACHE_PATH}/molecular_dynamics/mdp_files"
-MOLECULAR_DYNAMICS_RUN_CACHE_DIR="${LMABC_LOCAL_CACHE_PATH}/molecular_dynamics/run_files"
-BLAST_INSTALL_DIR="${LMABC_LOCAL_CACHE_PATH}/blast"
+LMABC_BASE_DIR="${LMABC_BASE_DIR:-$HOME/.lmabc/}"
+RXNAAMAPPER_BASE_DIR="${LMABC_BASE_DIR}/rxnaamapper"
+ENZYME_OPTIMIZATION_BASE_DIR="${LMABC_BASE_DIR}/enzyme_optimization/models"
+MOLECULAR_DYNAMICS_MDP_BASE_DIR="${LMABC_BASE_DIR}/molecular_dynamics/mdp_files"
+MOLECULAR_DYNAMICS_RUN_BASE_DIR="${LMABC_BASE_DIR}/molecular_dynamics/run_files"
+BLAST_INSTALL_DIR="${LMABC_BASE_DIR}/blast"
 BLASTDB_DIR="${BLAST_INSTALL_DIR}/blastdb"
 BLAST_VERSION="2.16.0"
 BLAST_ARCHIVE="ncbi-blast-${BLAST_VERSION}+-x64-linux.tar.gz"
 BLAST_DOWNLOAD_URL="https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/${BLAST_ARCHIVE}"
 
 if $FORCE_REINSTALL; then
-    rm -rf "$MOLECULAR_DYNAMICS_MDP_CACHE_DIR" \
-           "$MOLECULAR_DYNAMICS_RUN_CACHE_DIR" \
-           "$RXNAAMAPPER_CACHE_DIR" \
+    rm -rf "$MOLECULAR_DYNAMICS_MDP_BASE_DIR" \
+           "$MOLECULAR_DYNAMICS_RUN_BASE_DIR" \
+           "$RXNAAMAPPER_BASE_DIR" \
            "${BLAST_INSTALL_DIR}/ncbi-blast-${BLAST_VERSION}+"
 fi
 
-mkdir -p "$MOLECULAR_DYNAMICS_MDP_CACHE_DIR" \
-         "$MOLECULAR_DYNAMICS_RUN_CACHE_DIR" \
-         "$RXNAAMAPPER_CACHE_DIR" \
+mkdir -p "$MOLECULAR_DYNAMICS_MDP_BASE_DIR" \
+         "$MOLECULAR_DYNAMICS_RUN_BASE_DIR" \
+         "$RXNAAMAPPER_BASE_DIR" \
          "$BLAST_INSTALL_DIR" \
          "$BLASTDB_DIR"
 
 print_header "Setting up MD simulations"
-if [ ! -f "${MOLECULAR_DYNAMICS_MDP_CACHE_DIR}/minimization.mdp" ]; then
-    cp src/lmabc/resources/mdp_files/{minimization.mdp,nvt.mdp,npt.mdp} "$MOLECULAR_DYNAMICS_MDP_CACHE_DIR/"
+if [ ! -f "${MOLECULAR_DYNAMICS_MDP_BASE_DIR}/minimization.mdp" ]; then
+    cp src/lmabc/resources/mdp_files/{minimization.mdp,nvt.mdp,npt.mdp} "$MOLECULAR_DYNAMICS_MDP_BASE_DIR/"
     echo "MDP files instantiated"
 else
     echo "MD simulation MDP files already set up, skipping"
 fi
 
-if [ ! -f "${MOLECULAR_DYNAMICS_RUN_CACHE_DIR}/run_minimization.sh" ]; then
-    cp src/lmabc/resources/run_files/{run_minimization.sh,run_nvt.sh,run_npt.sh} "$MOLECULAR_DYNAMICS_RUN_CACHE_DIR/"
+if [ ! -f "${MOLECULAR_DYNAMICS_RUN_BASE_DIR}/run_minimization.sh" ]; then
+    cp src/lmabc/resources/run_files/{run_minimization.sh,run_nvt.sh,run_npt.sh} "$MOLECULAR_DYNAMICS_RUN_BASE_DIR/"
     echo "MD run files instantiated"
 else
     echo "MD simulation run files already set up, skipping"
 fi
 
 print_header "Setting up RXNAAMapper"
-if [ ! -f "${RXNAAMAPPER_CACHE_DIR}/tokenizer.json" ]; then
+if [ ! -f "${RXNAAMAPPER_BASE_DIR}/tokenizer.json" ]; then
     TEMP_DIR=$(mktemp -d)
     REPO_URL="https://github.com/rxn4chemistry/rxnaamapper.git"
     git clone "$REPO_URL" "$TEMP_DIR"
-    mv "$TEMP_DIR/examples/token_75K_min_600_max_750_500K.json" "${RXNAAMAPPER_CACHE_DIR}/tokenizer.json"
-    mv "$TEMP_DIR/examples/vocabulary_token_75K_min_600_max_750_500K.txt" "${RXNAAMAPPER_CACHE_DIR}/vocabulary.txt"
-    python tools_setup/rxn_aa_mapper_model_download.py "${RXNAAMAPPER_CACHE_DIR}"
+    mv "$TEMP_DIR/examples/token_75K_min_600_max_750_500K.json" "${RXNAAMAPPER_BASE_DIR}/tokenizer.json"
+    mv "$TEMP_DIR/examples/vocabulary_token_75K_min_600_max_750_500K.txt" "${RXNAAMAPPER_BASE_DIR}/vocabulary.txt"
+    python tools_setup/rxn_aa_mapper_model_download.py "${RXNAAMAPPER_BASE_DIR}"
     rm -rf "$TEMP_DIR"
 else
     echo "RXNAAMapper already set up, skipping"
@@ -107,13 +107,13 @@ if $RUN_MC_SETUP; then
         echo "Minio Client (mc) is already installed, skipping installation"
     fi
     mc alias set gt4sd-public-cos https://s3.par01.cloud-object-storage.appdomain.cloud b087e6810a5d4246a64e07e36ace338f ba4a1db5647a32c6109b58714befb7ea7145b983143e0836
-    if [ ! -d "${ENZYME_OPTIMIZATION_CACHE_DIR}/kcat" ] || [ -z "$(ls -A "${ENZYME_OPTIMIZATION_CACHE_DIR}/kcat")" ]; then
-        mc mirror --overwrite gt4sd-public-cos/gt4sd-cos-properties-artifacts/proteins/enzeptional/scorers/kcat/ "${ENZYME_OPTIMIZATION_CACHE_DIR}/kcat/"
+    if [ ! -d "${ENZYME_OPTIMIZATION_BASE_DIR}/kcat" ] || [ -z "$(ls -A "${ENZYME_OPTIMIZATION_BASE_DIR}/kcat")" ]; then
+        mc mirror --overwrite gt4sd-public-cos/gt4sd-cos-properties-artifacts/proteins/enzeptional/scorers/kcat/ "${ENZYME_OPTIMIZATION_BASE_DIR}/kcat/"
     else
         echo "kcat scorers already mirrored, skipping"
     fi
-    if [ ! -d "${ENZYME_OPTIMIZATION_CACHE_DIR}/feasibility" ] || [ -z "$(ls -A "${ENZYME_OPTIMIZATION_CACHE_DIR}/feasibility")" ]; then
-        mc mirror --overwrite gt4sd-public-cos/gt4sd-cos-properties-artifacts/proteins/enzeptional/scorers/feasibility/ "${ENZYME_OPTIMIZATION_CACHE_DIR}/feasibility/"
+    if [ ! -d "${ENZYME_OPTIMIZATION_BASE_DIR}/feasibility" ] || [ -z "$(ls -A "${ENZYME_OPTIMIZATION_BASE_DIR}/feasibility")" ]; then
+        mc mirror --overwrite gt4sd-public-cos/gt4sd-cos-properties-artifacts/proteins/enzeptional/scorers/feasibility/ "${ENZYME_OPTIMIZATION_BASE_DIR}/feasibility/"
     else
         echo "feasibility scorers already mirrored, skipping"
     fi
