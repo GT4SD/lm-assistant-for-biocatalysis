@@ -46,7 +46,7 @@ The Biocatalysis Assistant integrates several powerful tools to assist in variou
 Clone the repository to your local machine:
 
 ```bash
-git clone git@github.com/GT4SD/lm-assistant-for-biocatalysis
+git clone git@github.com:GT4SD/lm-assistant-for-biocatalysis.git
 cd lm-assistant-for-biocatalysis
 ```
 
