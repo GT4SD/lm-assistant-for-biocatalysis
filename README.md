@@ -57,14 +57,13 @@ cd lm-assistant-for-biocatalysis
 Before running the application locally or in Docker, you **must** configure the `.env` file. This file contains essential environment variables required for the application to function correctly.
 
 1. Create a `.env` file in the project root directory.
-2. Add the following configuration:
+2. Add your credentials as follow (here is an example for huggingface api):
 
    ```env
-   KEY=your_key_here
-   API=your_api_here
+   HUGGINGFACEHUB_API_TOKEN=your_key_here
    ```
 
-   Replace `your_key_here` and `your_api_here` with your actual credentials.
+   Replace `your_key_here` with your actual credential.
 
 3. **Important**: Ensure that `.env` is added to `.gitignore` to protect sensitive information.
 
