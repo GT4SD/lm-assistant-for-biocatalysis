@@ -23,7 +23,6 @@
 """Enhanced MD Simulations tools and utilities."""
 
 import logging
-import os
 import random
 import subprocess
 import tempfile
@@ -50,7 +49,7 @@ class SimulationConfiguration(BaseSettings):
         description="Root directory for simulations.",
     )
     gromacs_path: Path = Field(
-        default_factory=lambda: Path(os.getenv("GROMACS_PATH", "/usr/local/gromacs/bin/gmx")),
+        default=Path("/usr/local/gromacs/bin/gmx"),
         description="Path to GROMACS. Can be set via the 'GROMACS_PATH' environment variable.",
     )
     cache_dir: Path = Field(

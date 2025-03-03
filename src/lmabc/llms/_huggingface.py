@@ -23,7 +23,6 @@
 """Huggingface initialization."""
 
 import os
-from typing import Any, Dict
 
 from dotenv import load_dotenv
 from huggingface_hub import login
@@ -34,14 +33,6 @@ load_dotenv()
 HUGGINGFACEHUB_API_TOKEN = os.getenv("HuggingFaceHUB_API_TOKEN")
 token = os.environ["HUGGINGFACEHUB_API_TOKEN"]
 login(token)
-
-DIRECT_PARAMETERS = {
-    "max_new_tokens": 4048,
-    "max_length": 4048,
-    "do_sample": False,
-    "repetition_penalty": 1.03,
-    "return_full_text": True,
-}
 
 
 def create_huggingface_llm(model: str, **model_kwargs) -> ChatHuggingFace:
@@ -54,24 +45,9 @@ def create_huggingface_llm(model: str, **model_kwargs) -> ChatHuggingFace:
     Returns:
         Configured language model interface.
     """
-
-    direct_params = DIRECT_PARAMETERS.copy()
-    other_kwargs: Dict[str, Any] = {}
-
-    if model_kwargs:
-        for key, value in model_kwargs.items():
-            if key in DIRECT_PARAMETERS:
-                direct_params[key] = value
-            else:
-                other_kwargs[key] = value
-
     llm = HuggingFaceEndpoint(
         repo_id=model,
         huggingfacehub_api_token=token,
-        max_new_tokens=int(direct_params["max_new_tokens"]),
-        do_sample=bool(direct_params["do_sample"]),
-        repetition_penalty=direct_params["repetition_penalty"],
-        return_full_text=bool(direct_params["return_full_text"]),
-        **other_kwargs,
+        **model_kwargs,
     )
     return ChatHuggingFace(llm=llm, verbose=True)

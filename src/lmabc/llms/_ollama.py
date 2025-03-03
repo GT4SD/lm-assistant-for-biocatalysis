@@ -27,13 +27,6 @@ from langchain_community.chat_models import ChatOllama
 
 load_dotenv()
 
-DEFAULT_PARAMETERS = {
-    "max_new_tokens": 512,
-    "do_sample": False,
-    "repetition_penalty": 1.03,
-    "return_full_text": False,
-}
-
 
 def create_ollama_llm(model: str, **model_kwargs) -> ChatOllama:
     """
@@ -46,8 +39,4 @@ def create_ollama_llm(model: str, **model_kwargs) -> ChatOllama:
         Configured language model interface.
     """
 
-    parameters = DEFAULT_PARAMETERS.copy()
-    if model_kwargs:
-        parameters.update(model_kwargs)
-
-    return ChatOllama(model=model)
+    return ChatOllama(model=model, **model_kwargs)
