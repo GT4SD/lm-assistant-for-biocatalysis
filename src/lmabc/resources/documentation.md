@@ -31,11 +31,6 @@ Create a `.env` file in your project root with the following variables (add only
 ```plaintext
 # HuggingFace
 HUGGINGFACEHUB_API_TOKEN=your_huggingface_token
-
-# WatsonX
-WATSONX_API_KEY=your_watsonx_api_key
-WATSONX_URL=your_watsonx_url
-WATSONX_PROJECT_ID=your_watsonx_project_id
 ```
 
 ## Quick Start
