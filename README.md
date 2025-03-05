@@ -45,6 +45,10 @@ The Biocatalysis Assistant integrates the following tools for bioinformatics and
 - **Mutagenesis**: Perform in silico mutagenesis on protein sequences.
 - **MDSimulation**: Run molecular dynamics simulations.
 
+**Note:**  
+
+For a complete description of the tool and its usage, refer to [tools_description.md](./tools_description.md).
+
 ---
 
 ## Installation <a name="installation"></a>
