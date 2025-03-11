@@ -1,29 +1,26 @@
+#
+# MIT License
+#
+# Copyright (c) 2025 GT4SD team
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.#
 """RXNAAMapper tools and utilities."""
-
-__copyright__ = """
-MIT License
-
-Copyright (c) 2024 GT4SD team
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-"""
-
 
 import logging
 from pathlib import Path
@@ -53,17 +50,13 @@ class RXNAAMapperConfiguration(BaseSettings):
     """
 
     vocabulary_file: str = str(
-        BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("rxnaamapper")
-        / "vocabulary.txt"
+        BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_dir("rxnaamapper") / "vocabulary.txt"
     )
     aa_sequence_tokenizer_filepath: str = str(
-        BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("rxnaamapper")
-        / "tokenizer.json"
+        BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_dir("rxnaamapper") / "tokenizer.json"
     )
-    aa_sequence_tokenizer_type: str = "bert"
-    model_path: str = str(
-        BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("rxnaamapper") / "model"
-    )
+    aa_sequence_tokenizer_type: str = "generic"
+    model_path: str = str(BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_dir("rxnaamapper") / "model")
     head: int = 3
     layers: List[int] = [11]
     top_k: int = 1
@@ -85,6 +78,9 @@ class ExtractBindingSites(BiocatalysisAssistantBaseTool):
     Input Format:
         - Reaction SMILES must follow this structure: substrate SMILES | amino acid sequence >> product SMILES
         - Example:  CC(=O)Cc1ccccc1|MTENALVR>>CC(O)Cc1ccccc1
+
+    Output Format (string):
+        The binding sites are: 0-1, 20-24, 34-36
 """
 
     @staticmethod
@@ -139,19 +135,15 @@ class ExtractBindingSites(BiocatalysisAssistantBaseTool):
         try:
             mapper = RXNAAMapper(config=RXNAAMAPPER_SETTINGS.model_dump())
             intervals = mapper.get_predicted_active_site(
-                mapper.get_reactant_aa_sequence_attention_guided_maps(
-                    [reaction_smiles]
-                )[0]["mapped_rxn"]
+                mapper.get_reactant_aa_sequence_attention_guided_maps([reaction_smiles])[0][
+                    "mapped_rxn"
+                ],
+                rxn_separator=">>",
+                smiles_aa_sequence_separator="|",
             )
-            seq_length = len(reaction_smiles.split("|")[1].split(">>")[0].strip())
-            clean_intervals = [
-                interval for interval in intervals if interval[1] <= seq_length
-            ]
-
-            if len(clean_intervals) == 0:
-                return "Failed to extract binding sites."
-            else:
-                return str(clean_intervals)
+            intervals_str = ", ".join(f"{start}-{end}" for start, end in intervals)
+            result = "The binding sites are: " + intervals_str
+            return result
 
         except Exception as e:
             logger.error(f"Error in ExtractBindingSites: {e}")
@@ -167,9 +159,7 @@ class ExtractBindingSites(BiocatalysisAssistantBaseTool):
         Raises:
             NotImplementedError: Async execution is not implemented.
         """
-        raise NotImplementedError(
-            "Async execution not implemented for ExtractBindingSites."
-        )
+        raise NotImplementedError("Async execution not implemented for ExtractBindingSites.")
 
 
 class GetElementsOfReaction(BiocatalysisAssistantBaseTool):
@@ -232,7 +222,14 @@ class GetElementsOfReaction(BiocatalysisAssistantBaseTool):
                 reactants, aa_sequence = precursors.split(smiles_aa_sequence_separator)
             except Exception:
                 reactants = precursors
-            return f"Reactants: {reactants}, AA Sequence: {aa_sequence}, Products: {products}"
+            result = (
+                "Extracted Reaction Elements\n"
+                "=============================\n"
+                "Reactants: " + reactants + "\n"
+                "Amino Acid Sequence: " + aa_sequence + "\n"
+                "Products: " + products
+            )
+            return result
         except Exception as e:
             logger.error(f"Error in GetElementsOfReaction: {e}")
             raise ValueError("Failed to get elements of reaction.")

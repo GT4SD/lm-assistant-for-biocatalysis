@@ -2,23 +2,40 @@
 
 ![Biocatalysis Assistant Architecture](/assets/GraphicalAbstract.png)
 
-**Biocatalysis Assistant** is an advanced Python-based chatbot framework designed to automate and facilitate bioinformatics and biocatalysis tasks. Leveraging a dynamic set of tools and integrating powerful language models, this assistant streamlines complex processes in computational biology and enzyme engineering, making research more efficient and accessible.
+**Biocatalysis Assistant** is a Python-based chatbot framework designed to automate and streamline bioinformatics and biocatalysis tasks. By integrating advanced language models and a dynamic set of tools, it simplifies complex processes in computational biology and enzyme engineering, making research more efficient and accessible.
 
+---
 
+## Table of Contents
 
-## Features
+1. [Features](#features)
+2. [Tools](#tools)
+3. [Installation](#installation)
+   - [Docker Setup and Usage](#docker-setup-and-usage)
+   - [Local Installation](#local-installation)
+4. [Usage](#usage)
+   - [Command Line Interface (CLI)](#command-line-interface-cli)
+   - [Streamlit Web Application](#streamlit-web-application)
+5. [References](#references)
+6. [License](#license)
+7. [Support](#support)
 
-- **🗣️ Interactive Chatbot Interface**: Engage with the assistant through a user-friendly command-line interface.
-- **🔧 Dynamic Tool Integration**: Seamlessly run various bioinformatics and biocatalysis tools.
-- **🤖 Language Model Integration**: Utilize state-of-the-art language models to guide analysis and decision-making processes.
-- **🔗 Extensible Architecture**: Easily integrate new tools and functionalities.
-- **📈 Optimization Capabilities**: Optimize enzyme sequences for improved catalytic activity.
+---
+
+## Features <a name="features"></a>
+
+- **🗣️ Interactive Chatbot Interface**: Engage with the assistant via a user-friendly command-line or web interface.
+- **🔧 Dynamic Tool Integration**: Seamlessly run bioinformatics and biocatalysis tools.
+- **🤖 Language Model Integration**: Leverage state-of-the-art language models for analysis and decision-making.
+- **🔗 Extensible Architecture**: Easily add new tools and functionalities.
+- **📈 Optimization Capabilities**: Optimize enzyme sequences for enhanced catalytic activity.
 - **🔍 Comprehensive Analysis**: Perform detailed bioinformatics analyses, including binding site extraction and reaction element analysis.
 
-## Tools
+---
 
-The Biocatalysis Assistant integrates several powerful tools to assist in various bioinformatics and biocatalysis tasks:
+## Tools <a name="tools"></a>
 
+The Biocatalysis Assistant integrates the following tools for bioinformatics and biocatalysis tasks:
 - **ExtractBindingSites**: Extract binding sites from enzyme sequences.
 - **GetElementsOfReaction**: Analyze and extract elements from biochemical reactions.
 - **Blastp**: Perform BLASTP searches for protein sequence analysis.
@@ -28,141 +45,154 @@ The Biocatalysis Assistant integrates several powerful tools to assist in variou
 - **Mutagenesis**: Perform in silico mutagenesis on protein sequences.
 - **MDSimulation**: Run molecular dynamics simulations.
 
-## Installation
+**Note:**  
 
-### Prerequisites
+For a complete description of the tool and its usage, refer to [tools_description.md](./tools_description.md).
 
-- **Python**: Version 3.10 or higher. [Download Python](https://www.python.org/downloads/)
+---
 
-To use all the supported tools, install the following on your system:
+## Installation <a name="installation"></a>
 
-- **BLASTP**: NCBI BLAST+ toolkit. [Download BLASTP](https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/)
-- **PyMOL**: Molecular visualization system. [Install PyMOL via Conda](https://pymol.org/2/#download)
-- **GROMACS**: Molecular dynamics package. [Install GROMACS](https://manual.gromacs.org/documentation/current/install-guide/index.html)
+### Docker Setup and Usage <a name="docker-setup-and-usage"></a>
 
-### Steps
+The Biocatalysis Assistant can be run using Docker, which simplifies the setup process by encapsulating all dependencies in a container. **If you use Docker, you can skip the local installation steps below.**
 
-1. **Clone the Repository**
+#### **1. Build the Docker Image**
+```bash
+docker build -t lmabc .
+```
 
-   ```bash
-   git clone git@github.com/GT4SD/lm-assistant-for-biocatalysis
-   cd lm-assistant-for-biocatalysis
-   ```
+#### **2. Run the Docker Container**
+```bash
+docker run -it -p 8501:8501 --env-file .env lmabc lmabc-app
+```
+- `-it`: Runs the container interactively.
+- `-p 8501:8501`: Maps port `8501` on your host to the container.
+- `--env-file .env`: Passes environment variables.
 
-2. **Install Poetry and Project Dependencies**
+#### **3. Mount Local Directories**
+To persist data or use local files:
+```bash
+docker run -it -p 8501:8501 --env-file .env --volume ${HOME}/my-cache:/app/.lmabc lmabc lmabc-app
+```
 
-   ```bash
-   pip install poetry
-   poetry install
-   ```
+#### **4. Access the Streamlit Web App**
+Open your browser and navigate to:
+```
+http://localhost:8501
+```
 
-3. **Setup molecular dynamics file, the rxnaamapper and enzyme optimization models**
-    Choose one of the following options based on your operating system:
+#### **5. Use the CLI Inside the Container**
+```bash
+docker run -it --env-file .env lmabc:latest lmabc --help
+```
 
-    a) For macOS users with Homebrew:
-    ```bash
-    bash tools_setup/setup.sh
-    ```
+#### **6. Example Commands**
+- **Run the Streamlit Web App**:
+  ```bash
+  docker run -it -p 8501:8501 --env-file .env lmabc:latest lmabc-app
+  ```
+- **Use the CLI**:
+  ```bash
+  docker run -it --env-file .env lmabc:latest lmabc
+  ```
+- **Run with Local Cache**:
+  ```bash
+  docker run -it -p 8501:8501 --env-file .env --volume ${HOME}/my-cache:/app/.lmabc lmabc:latest lmabc-app
+  ```
 
-    b) For users on other operating systems or without Homebrew:
-    ```bash
-    bash tools_setup/setup.sh --skip-mc
-    ```
+---
 
-    The script performs the following actions:
+### Local Installation <a name="local-installation"></a>
 
-    (i) **RXNAAMapper Setup**
-         - Sets up thea BERT model, a tokenizer and vocabulary
+If you prefer to run the Biocatalysis Assistant locally, follow these steps.
 
-    (ii) **Minio Client (mc) Setup** (skipped if using `--skip-mc`)
-         - Installs Minio Client using Homebrew
-         - Configures Minio Client with predefined credentials
+#### **Prerequisites**
+- **Python**: Version 3.10 or higher. [Download Python](https://www.python.org/downloads/).
+- **GROMACS**: A molecular dynamics simulation package. [Install GROMACS](https://manual.gromacs.org/documentation/current/install-guide/index.html).
 
-    (iii) **Enzyme Optimization Models Setup**
-         - Downloads and sets up models for enzyme optimization (Minio needed)
+---
 
-    
+#### **1. Clone the Repository**
 
-    **Note:** - If you're not using macOS or don't have Homebrew, use the `--skip-mc` option and manually install Minio Client appropriate for your operating system.
+Clone the repository to your local machine:
 
-4. **Install Additional Required Tools**
+```bash
+git clone git@github.com:GT4SD/lm-assistant-for-biocatalysis.git
+cd lm-assistant-for-biocatalysis
+```
 
-   - **BLASTP**
-   - **PyMOL**
-   - **GROMACS**
+---
 
-5. **Configure Environment Variables**
+#### **2. Set Up the Environment File**
 
-   Create a `.env` file in the project root and add your configuration:
-
+1. Create a `.env` file in the project root directory.
+2. Add your credentials (e.g., for Hugging Face API):
    ```env
-   KEY=your_key_here
-   API=your_api_here
+   HUGGINGFACEHUB_API_TOKEN=your_key_here
    ```
+3. **Important**: Ensure `.env` is added to `.gitignore` to protect sensitive information.
 
-   > **Note**: Ensure that `.env` is added to `.gitignore` to protect sensitive information.
+---
 
-## Configuration
+#### **3. Install Dependencies**
 
-Each tool within the Biocatalysis Assistant has its own configuration options that can be customized using environment variables. Refer to the [Tool Documentation](./docs/tools.md) for specific configuration details.
+Install dependencies using `uv`:
 
-## Usage
+```bash
+pip install uv
+uv pip install -e .
+```
 
-### Running the Biocatalysis Assistant
+---
 
-The Biocatalysis Assistant offers two interfaces for interaction: a Command Line Interface (CLI) and a Streamlit web application. Choose the interface that best suits your needs.
+#### **4. Set Up Tools and Databases**
 
-#### Command Line Interface (CLI)
+Run the setup script to configure molecular dynamics files, RXNAAMapper, enzyme optimization models, and BLAST databases. Use the `--blastdb` option to specify which BLAST database(s) to download:
+- **Default**: Downloads Swissprot database.
+- **Custom**: Pass a specific database name (e.g., `nr`).
+- **All**: Pass `all` to download a predefined set of databases.
+
+##### **For macOS Users with Homebrew**
+```bash
+bash tools_setup/setup.sh --blastdb <db_name|all>
+```
+
+##### **For Other Operating Systems or Without Homebrew**
+Skip Minio Client installation:
+```bash
+bash tools_setup/setup.sh --skip-mc --blastdb <db_name|all>
+```
+
+---
+
+#### **5. Install Additional Tools**
+- **PyMOL**: Install via Conda.
+- **GROMACS**: Follow the [official installation guide](https://manual.gromacs.org/documentation/current/install-guide/index.html).
+
+---
+
+## Usage <a name="usage"></a>
+
+### Command Line Interface (CLI) <a name="command-line-interface-cli"></a>
 
 To start the Biocatalysis Assistant using the CLI:
 
-1. Ensure you have completed the installation process using Poetry.
+1. Ensure you have completed the installation process using Uv.
 2. Open your terminal.
 3. Run the following command:
 
 ```bash
 lmabc --help
-
-
-Biocatalysis Assistant CLI Help
-
-DESCRIPTION:
-    This CLI provides an interface to interact with the Biocatalysis Assistant,
-    allowing users to ask questions and receive responses related to biocatalysis.
-
-USAGE:
-    lmabc
-
-INITIAL SETUP:
-    Upon starting, you will be prompted to:
-    1. Set verbosity level
-    2. Confirm or change the model and provider
-
-COMMANDS:
-    help   : Display this help message
-    exit   : Exit the program
-    clear  : Clear the screen
-
-INTERACTION:
-    After setup, you can start asking questions. The assistant will process your
-    input and provide responses based on its knowledge of biocatalysis.
-
-EXAMPLES:
-    - To ask a question:
-      > Enter your question: What are the main types of enzyme catalysis?
-
-    - To clear the screen:
-      > Enter your question: clear
-
-    - To exit the program:
-      > Enter your question: exit
 ```
 
-#### Streamlit Web Application
+---
+
+### Streamlit Web Application <a name="streamlit-web-application"></a>
 
 To run the Biocatalysis Assistant using the Streamlit web interface:
 
-1. Ensure you have completed the installation process using Poetry.
+1. Ensure you have completed the installation process using Uv.
 2. Open your terminal.
 3. Run the following command:
 
@@ -170,23 +200,12 @@ To run the Biocatalysis Assistant using the Streamlit web interface:
 lmabc-app
 ```
 
-This command starts the Streamlit server and automatically opens the web application in your default browser. If it doesn't open automatically, the terminal will display a local URL you can copy and paste into your browser.
+---
 
-The Streamlit app provides a user-friendly interface with:
-- A chat-like interaction on the home page
-- A list of available tools
-- Settings for customizing the assistant's configuration
+## References <a name="references"></a>
 
-![Biocatalysis Assistant Homepage](/assets/Homepage.png)
-
-Choose the interface that best fits your workflow and preferences. Both interfaces interact with the same underlying Biocatalysis Assistant, ensuring consistent functionality and results.
-
-
-## References
-
-If you use `lmabc` in your projects, please consider citing the following:
-
-```bib
+If you use `lmabc` in your projects, please cite:
+```bibtex
 @software{LMABC,
   author = {Yves Gaetan Nana Teukam, Francesca Grisoni, Matteo Manica},
   month = {10},
@@ -197,11 +216,16 @@ If you use `lmabc` in your projects, please consider citing the following:
 }
 ```
 
-## License
+---
 
-The `lmabc` codebase is under MIT license.
-For individual model usage, please refer to the model licenses found in the original packages.
+## License <a name="license"></a>
 
-## Support
+The `lmabc` codebase is under the MIT license. For individual model usage, refer to the licenses of the original packages.
+
+---
+
+## Support <a name="support"></a>
 
 For issues or questions, please [open an issue](https://github.com/GT4SD/lm-assistant-for-biocatalysis/issues) in the GitHub repository.
+
+---

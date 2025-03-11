@@ -1,28 +1,26 @@
+#
+# MIT License
+#
+# Copyright (c) 2025 GT4SD team
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.#
 """Enzyme optimization tools and utilities."""
-
-__copyright__ = """
-MIT License
-
-Copyright (c) 2024 GT4SD team
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-"""
 
 import logging
 from pathlib import Path
@@ -41,6 +39,7 @@ from enzeptional import (  # type: ignore
 )
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from tabulate import tabulate
 from transformers import logging as transformers_logging
 
 from ..configuration import BIOCATALYSIS_AGENT_CONFIGURATION
@@ -59,28 +58,23 @@ class EnzeptinalConfiguration(BaseSettings):
         default="feasibility",
         description="Type of scoring model ('feasibility' or 'kcat').",
     )
-    num_iterations: int = Field(
-        default=3, description="Number of optimization iterations."
-    )
-    num_sequences: int = Field(
-        default=5, description="Number of sequences to optimize."
-    )
-    num_mutations: int = Field(
-        default=5, description="Number of mutations per iteration."
-    )
-    time_budget: int = Field(
-        default=3600, description="Time budget for optimization in seconds."
-    )
-    batch_size: int = Field(default=5, description="Batch size for optimization.")
-    top_k: int = Field(default=3, description="Top K sequences to consider.")
-    selection_ratio: float = Field(
-        default=0.25, description="Selection ratio for optimization."
-    )
+    num_iterations: int = Field(default=2, description="Number of optimization iterations.")
+    num_sequences: int = Field(default=3, description="Number of sequences to optimize.")
+    num_mutations: int = Field(default=5, description="Number of mutations per iteration.")
+    time_budget: int = Field(default=3600, description="Time budget for optimization in seconds.")
+    batch_size: int = Field(default=2, description="Batch size for optimization.")
+    top_k: int = Field(default=2, description="Top K sequences to consider.")
+    selection_ratio: float = Field(default=0.25, description="Selection ratio for optimization.")
     tool_dir: Path = Field(
-        default=BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path(
+        default=BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_dir("enzyme_optimization"),
+        description="Tool directory.",
+    )
+    cache_dir: Path = Field(
+        default_factory=lambda: BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_cache_dir(
             "enzyme_optimization"
-        ),
-        description="Output directory.",
+        )
+        / "output",
+        description="Cache directory",
     )
     output_filename: str = Field(
         default="OptimizationOutput.json", description="Filename of the output file."
@@ -103,72 +97,59 @@ class EnzeptinalConfiguration(BaseSettings):
 
 ENZEPTIONAL_SETTINGS = EnzeptinalConfiguration()
 
-ENZEPTIONAL_DESCRIPTION = """OptimizeEnzymeSequences Tool also known as Enzeptional
-This tool must be executed on the system.
+ENZEPTIONAL_DESCRIPTION = """ OptimizeEnzymeSequences (Enzeptional) - Enzyme Sequence Optimization Tool
 
-Description:
-The OptimizeEnzymeSequences tool is designed to optimize enzyme sequences for biocatalysed reactions using the Enzeptional framework. It employs advanced machine learning techniques to suggest mutations that may improve the enzyme's catalytic efficiency or substrate specificity.
+    Description:
+    This tool optimizes enzyme sequences for biocatalytic reactions, enhancing catalytic efficiency and substrate specificity. The tool applies mutation in the intervals to optimize the reaction. The sequence optimized can be refered to as wildtype.
 
-Here is the format of a reaction SMILES or biocatalysed reaction: reactants|amino_acid_sequence>>products
+    Required Input Parameters:
+    1. `substrate_smiles` (str) - SMILES representation of the reactant molecule.
+    2. `product_smiles` (str) - SMILES representation of the desired product molecule.
+    3. `protein_sequence` (str) - Amino acid sequence of the enzyme to optimize.
+    4. `scorer_type` (str) - The scoring model type, either `'feasibility'` (default) or `'kcat'`.
 
-Required: Make sure all the input you are about to use, have the correct type. In case the type do not match, exit and give an error message!
+    Optional Parameters:
+    - `intervals` (List[List[int]]) - List of regions (start, end) to focus mutations on (e.g. important sites). Here is an example: [[1, 4], [20, 21], [50, 56]]
+    - `num_iterations` (int) - Number of optimization iterations. Default: 2.
+    - `num_sequences` (int) - Number of sequences optimized per iteration. Default: 5.
+    - `num_mutations` (int) - Number of mutations per iteration. Default: 5.
+    - `time_budget` (int) - Max optimization time (seconds). Default: 3600.
+    - `batch_size` (int) - Number of sequences processed in parallel. Default: 5.
+    - `top_k` (int) - Top sequences to consider per iteration. Default: 3.
+    - `selection_ratio` (float) - Fraction of top sequences selected for the next iteration. Default: 0.25.
+    - `perform_crossover` (bool) - Whether to apply sequence crossover. Default: True.
+    - `crossover_type` (str) - Type of crossover (`'sp_crossover'`, `'uniform_crossover'`). Default: `'sp_crossover'`.
+    - `pad_intervals` (bool) - Whether to pad mutation regions. Default: False.
+    - `minimum_interval_length` (int) - Min length for padded intervals. Default: 8.
+    - `seed` (int) - Random seed for reproducibility. Default: 42.
+    - `number_of_results` (int) - Number of optimized sequences to return. Default: 10.
 
-Functionality:
-- Optimizes protein sequences based on given substrate and product SMILES representations
-- Uses either a feasibility scorer or a kcat (turnover number) scorer for optimization
-- Applies a sequence of mutations and crossovers to generate optimized enzyme variants
+    Output (Tabulated Format):
+    The tool returns a table of optimized enzyme sequences ranked by predicted performance for the given reaction.
 
-Key Parameters:
-1. substrate_smiles (str, required): SMILES representation of the substrate molecule
-2. product_smiles (str, required): SMILES representation of the desired product molecule
-3. protein_sequence (str, required): Amino acid sequence of the enzyme to be optimized
-4. scorer_type (str, required): Type of scoring model to use ('feasibility' or 'kcat'). Default is 'feasibility'
-5. intervals (List[List[int]], optional): Specific regions of the protein sequence to focus mutations on This could be binding sites or active sites. If not provided, the entire sequence is considered
-6. num_iterations (int, optional): Number of optimization iterations to perform. Default is 3
-7. num_sequences (int, optional): Number of sequences to optimize in each iteration. Default is 5
-8. num_mutations (int, optional): Number of mutations to apply per iteration. Default is 5
-9. time_budget (int, optional): Maximum time (in seconds) allowed for optimization. Default is 3600 (1 hour)
-10. batch_size (int, optional): Batch size for processing sequences. Default is 5
-11. top_k (int, optional): Number of top sequences to consider for the next iteration. Default is 3
-12. selection_ratio (float, optional): Ratio of sequences to select for the next iteration. Default is 0.25
-13. tool_dir (Path, Optional): Output directory.
-14. output_filename (str, Optional): Filename of the output file.
-15. perform_crossover (bool, Optional): If crossover should be perform. Default is True"
-15. crossover_type (str, Optional): The type of crossover to perform in case perform_crossover is True. Default is sp_crossover. Here are some that are implemented in the tool: sp_crossover (Performs a single point crossover between two sequences), and uniform_crossover (Performs a uniform crossover between two sequences)"
-17. pad_intervals (bool, Optional): If to perform padding or not of the intervals. Default is False
-18. minimum_interval_length (int, Optional): Minimum length per interval during padding. Default is 8
-19. seed (int, Optional): Random seed. Default is 42
-20: number_of_results (int, optional): Number of result to return. Default is 10.
+    Example output:
 
+    +--------+-----------------------------+--------+
+    | Index  | Sequence                    | Score  |
+    +--------+-----------------------------+--------+
+    | 1      | MVLSPADKTNVKAA...           | 0.9200 |
+    | 2      | MVLAPADKTNVKAA...           | 0.8900 |
+    | 3      | MVLSPADRTNVKAA...           | 0.8750 |
+    +--------+-----------------------------+--------+
 
-Usage Notes:
-- Provide SMILES strings for substrate and product that accurately represent the desired reaction
-- The protein sequence should be in standard single-letter amino acid code
-- When specifying intervals, use a list of [start, end] pairs, e.g., [[0, 50], [100, 150]] to focus on residues 1-50 and 101-150
-- Adjust num_iterations, num_sequences, and num_mutations to balance between exploration and computation time
-- The time_budget parameter can be used to limit long-running optimizations
-- When first running optimization, store all information (sequences and scores). Keep sequence-score associations exactly as provided
-- For follow-up questions about the same optimization results, use the stored information instead of rerunning the tool
-- NEVER modify, round, or make up scores - use exactly what's in the results
-- Only rerun optimization if new parameters or sequences are requested
+    Usage:
+    ```python
+    result = tool._run(
+        substrate_smiles="CCOCC",
+        product_smiles="CCO",
+        protein_sequence="MVLSPADKTNVKAA...",
+        scorer_type="feasibility",
+        number_of_results=5,   # optional
+        intervals=[[..., ...], [..., ...]]   # optional
+        
+    )
+    ```
 
-Output:
-The tool returns a dictionary containing the best sequences and their score, ranked by their predicted performance for the given substrate-product pair.
-You should return the best sequence with its score, unless you are asked differently or to return a certain amount of sequences!.
-
-Example Usage:
-result = tool._run(
-    substrate_smiles,
-    product_smiles,
-    protein_sequence,
-    scorer_type,
-    intervals,
-    num_iterations,
-    time_budget
-    number_of_results,
-)
-
-This tool is particularly useful for enzyme engineering projects, metabolic engineering, and biocatalysis optimization. It can help researchers identify promising enzyme variants for experimental validation, potentially reducing the time and resources required for directed evolution experiments.
 """
 
 
@@ -228,9 +209,7 @@ class OptimizerFactory:
         language_model_path = "facebook/esm2_t33_650M_UR50D"
         chem_model_path = "seyonec/ChemBERTa-zinc-base-v1"
 
-        protein_model = ModelFactory.create_embedder(
-            language_model_path, language_model_path
-        )
+        protein_model = ModelFactory.create_embedder(language_model_path, language_model_path)
         chem_model = ModelFactory.create_embedder(chem_model_path, chem_model_path)
 
         mutation_config = {
@@ -240,9 +219,7 @@ class OptimizerFactory:
             "unmasking_model_path": language_model_path,
         }
 
-        mutator = SequenceMutator(
-            sequence=protein_sequence, mutation_config=mutation_config
-        )
+        mutator = SequenceMutator(sequence=protein_sequence, mutation_config=mutation_config)
         mutator.set_top_k(ENZEPTIONAL_SETTINGS.top_k)
 
         scorer = SequenceScorer(
@@ -287,22 +264,28 @@ class OptimizeEnzymeSequences(BiocatalysisAssistantBaseTool):
     def check_requirements() -> bool:
         """
         Check if the required directories and files for enzyme optimization exist.
+        If a required directory does not exist, attempt to create it.
 
         Returns:
-            True if all required directories and files exist, False otherwise.
+            True if all required directories exist or were successfully created,
+            False if any directory creation fails.
         """
         settings = ENZEPTIONAL_SETTINGS
 
         paths_to_check = [
             settings.tool_dir,
             settings.tool_dir / "models",
-            settings.tool_dir / "output",
+            settings.cache_dir,
         ]
 
         for path in paths_to_check:
             if not path.exists():
                 logger.warning(f"Directory {path} does not exist. Creating it now.")
-                path.mkdir(parents=True, exist_ok=True)
+                try:
+                    path.mkdir(parents=True, exist_ok=True)
+                except Exception as e:
+                    logger.error(f"Could not create directory {path}: {e}")
+                    return False
 
         return True
 
@@ -318,7 +301,7 @@ class OptimizeEnzymeSequences(BiocatalysisAssistantBaseTool):
     ) -> str:
         """
         Run enzyme sequence optimization.
-        
+
         Args:
             substrate_smiles: SMILES string of the substrate.
             product_smiles: SMILES string of the product.
@@ -326,30 +309,30 @@ class OptimizeEnzymeSequences(BiocatalysisAssistantBaseTool):
             scorer_type: Type of scorer to use (default: "feasibility").
             intervals: List of intervals for mutation (default: []).
             number_of_results: Number of results to return (default: 10).
-            
+
         Returns:
             A formatted string containing the optimization results.
-        
+
         Raises:
             ValueError: If input validation fails or optimization fails.
         """
         if not substrate_smiles or not product_smiles or not protein_sequence:
             return "Error: Missing required input parameters. Please provide substrate_smiles, product_smiles, and protein_sequence."
-            
+
         if scorer_type not in ["feasibility", "kcat"]:
             return f"Error: Invalid scorer_type '{scorer_type}'. Must be either 'feasibility' or 'kcat'."
-            
+
         if number_of_results is None or number_of_results < 1:
             number_of_results = 10
-            
+
         try:
             if not protein_sequence.isalpha():
                 return "Error: Invalid protein sequence. Must contain only amino acid letters."
-                
+
             config = ENZEPTIONAL_SETTINGS.model_copy(update=kwargs)
             use_xgboost_scorer = scorer_type == "kcat"
             scorer_path, scaler_path = self._get_model_paths(scorer_type)
-            
+
             if not intervals:
                 intervals = [[0, len(protein_sequence)]]
             else:
@@ -378,44 +361,33 @@ class OptimizeEnzymeSequences(BiocatalysisAssistantBaseTool):
                 d for d in optimized_sequences if d["sequence"] != protein_sequence
             ]
 
-            optimized_sequences = list({
-                seq["sequence"]: seq
-                for seq in optimized_sequences
-            }.values())
-
+            optimized_sequences = list(
+                {seq["sequence"]: seq for seq in optimized_sequences}.values()
+            )
 
             if not optimized_sequences:
                 return "No improved sequences found."
 
-            filename: Path = config.tool_dir / "output" / config.output_filename
+            filename: Path = config.cache_dir / config.output_filename
             self._save_results(results=optimized_sequences, filename=filename)
 
-            df = pd.read_json(f"{filename}", orient="records", lines=True).head(
-                number_of_results
+            df = pd.read_json(f"{filename}", orient="records", lines=True).head(number_of_results)
+
+            table_data = [
+                [idx, row["sequence"], f"{row['score']:.4f}"]
+                for idx, row in enumerate(df.to_dict("records"), 1)
+            ]
+            result = f"Found {len(table_data)} optimized sequences.\n\n" + tabulate(
+                table_data, headers=["Index", "Sequence", "Score"], tablefmt="grid"
             )
-            
-            sequences_info = []
-            for idx, row in enumerate(df.to_dict('records'), 1):
-                sequences_info.append(
-                    f"Sequence {idx}:\n"
-                    f"Score: {row['score']:.4f}\n"
-                    f"Sequence: {row['sequence']}"
-                )
-                
-            result = (
-                f"Found {len(sequences_info)} optimized sequences.\n\n" +
-                "\n\n".join(sequences_info)
-            )
-            
+
             return result
 
         except Exception as e:
             logger.error(f"Error in OptimizeEnzymeSequences: {e}")
             return f"Error during optimization: {str(e)}"
 
-    def _get_model_paths(
-        self, scorer_type: str = "feasibility"
-    ) -> Tuple[str, Optional[str]]:
+    def _get_model_paths(self, scorer_type: str = "feasibility") -> Tuple[str, Optional[str]]:
         """
         Get paths for the scorer model and scaler.
 
@@ -449,6 +421,4 @@ class OptimizeEnzymeSequences(BiocatalysisAssistantBaseTool):
         Raises:
             NotImplementedError: Async execution is not implemented.
         """
-        raise NotImplementedError(
-            "Async execution not implemented for OptimizeEnzymeSequences."
-        )
+        raise NotImplementedError("Async execution not implemented for OptimizeEnzymeSequences.")

@@ -1,40 +1,41 @@
+#
+# MIT License
+#
+# Copyright (c) 2025 GT4SD team
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.#
 """Blast tools and utilities"""
 
-__copyright__ = """
-MIT License
-
-Copyright (c) 2024 GT4SD team
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-"""
-
-
 import logging
+import random
 import subprocess
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 
 import pandas as pd
-from Bio import SeqIO
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from tabulate import tabulate
 
 from ..configuration import BIOCATALYSIS_AGENT_CONFIGURATION
+from .blast_utils import BLAST_OPTIONS, BLAST_OUTPUT_FORMATS, BLAST_SPECIFIERS
 from .core import BiocatalysisAssistantBaseTool
 
 logger = logging.getLogger(__name__)
@@ -50,18 +51,18 @@ class BlastpSettings(BaseSettings):
         evalue: The E-value threshold for reporting matches.
         outfmt: The output format.
         max_target_seqs: The maximum number of aligned sequences to keep.
-        trash_dir: Directory to store temporary files like the FASTA query and BLAST output.
+        cache_dir: Directory to store temporary files like the FASTA query and BLAST output.
     """
 
-    db: Path = (
-        BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("blast")
-        / "blastdb/swissprot"
-    )
+    db: Path = BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_dir("blast") / "blastdb"
+
     evalue: float = 1e-5
-    outfmt: str = "6"
+    outfmt: str = "6 sseqid pident evalue bitscore stitle sseq"
     max_target_seqs: int = 5
-    trash_dir: Path = (
-        BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("blast") / "blast_logs"
+    cache_dir: Path = Field(
+        default_factory=lambda: BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_cache_dir("blast")
+        / "blast_logs",
+        description="Cache directory",
     )
 
     model_config = SettingsConfigDict(env_prefix="BLASTP_")
@@ -82,24 +83,57 @@ class Blastp(BiocatalysisAssistantBaseTool):
 
     name: str = "Blastp"
     description: str = """
-                    This tool must be executed on the system. This tool facilitates the execution of a BLASTP search using a specified query protein sequence. Before starting set parameters to {} unless some specific parameters are required!
-                    Importantly, any parameter not explicitly specified for modification should remain unchanged, ensuring the
-                    integrity of the default or pre-set configurations. Change only the parameters that have been explicitly asked to be changed.
-                    If asked to only find a certain amount of sequences, the only parameter to change is max_target_seqs.
-                    More details about blast arguments:
-                    Here are more info about the different arguments
-                    -query <File_In>
-                    Input file name
-                    -db <String>
-                    BLAST database name or path. As Default value {DEFAUL_DB}
-                    -evalue <Real>
-                    Expectation value (E) threshold for saving hits. Default = 1e-5
-                    -out <File_Out, file name length < 256>
-                    Output file name
-                    -outfmt 6
-                    -max_target_seqs <Integer, >=1>
-                    Default = '10'
-                    """
+        This tool facilitates the execution of a BLASTP search using a specified query protein sequence.
+
+        Key Features:
+        - Users can choose the database to search against (default: `swissprot`).
+        - Users can specify an experiment ID for better tracking. If not provided, a default ID is generated.
+        - If the selected database is not available, instructions will be provided on how to install it.
+        - Results are stored in a dedicated folder for each experiment.
+        - Only explicitly requested parameters are modified.
+
+        BLASTP Arguments:
+        - `query`: The protein sequence as a string.
+        - `experiment_id`: A unique identifier for this run (optional).
+        - `database_name`: The name of the BLAST database to use (default: "swissprot").
+        - `evalue`: The E-value threshold for reporting matches (default: "1e-5").
+        - `outfmt`: The output format (default: "6 sseqid pident evalue bitscore stitle sseq").
+        - `max_target_seqs`: The maximum number of aligned sequences to keep (default: "10").
+        - Additional BLASTP arguments can be passed as keyword arguments (e.g., "gapopen=11").
+        Only valid BLASTP arguments are accepted. Invalid arguments will raise an error.
+
+        Example Usage:
+        ```python
+        tool.run(
+            query="MY_PROTEIN_SEQUENCE",
+            database_name="swissprot",
+            evalue=1e-5,
+            outfmt="6 sseqid pident evalue bitscore stitle sseq",
+            max_target_seqs=10,
+            gapopen=11  # Additional valid BLASTP argument
+        )
+        ```
+
+        Example Output:
+        ```
+        BLASTP Search Results
+
+        Query Sequence:
+        Database Used:
+        Experiment ID (if present):
+
+        --------------------------------------------------------
+        | Accession  | Identity (%) | E-Value  | Bit Score | Description                           |
+        --------------------------------------------------------
+        | XXX   | XX.X        | X    | X     | X         |
+        | XXX   | XX.X        | X    | X     | X         |
+        | XXX   | XX.X        | X    | X     | X         |
+        --------------------------------------------------------
+
+        Results Saved in: "OUT_FILE"
+        ```
+
+    """
 
     @classmethod
     def check_requirements(cls) -> bool:
@@ -111,186 +145,151 @@ class Blastp(BiocatalysisAssistantBaseTool):
         """
         settings = BLAST_SETTINGS
         if not Path(settings.db).parent.exists():
+            logger.warning(f"Database directory {Path(settings.db).parent} does not exist.")
+            return False
+        if not settings.cache_dir.exists():
             logger.warning(
-                f"Database directory {Path(settings.db).parent} does not exist."
+                f"Cache directory {settings.cache_dir} does not exist. Creating it now..."
             )
-            return False
-        if not settings.trash_dir.exists():
-            logger.warning(f"Trash directory {settings.trash_dir} does not exist.")
-            return False
+            settings.cache_dir.mkdir(parents=True, exist_ok=True)
         return True
 
-    def _run(self, query: str, parameters: Optional[Dict[str, Any]] = None) -> str:
+    def _run(
+        self,
+        query: str,
+        experiment_id: Optional[str] = None,
+        database_name: Optional[str] = "swissprot",
+        evalue: Optional[float] = None,
+        outfmt: Optional[str] = None,
+        max_target_seqs: Optional[int] = None,
+        **kwargs,
+    ) -> str:
         """
         Run the Blastp tool on the provided query sequence with dynamically provided parameters.
 
         Args:
             query: The protein sequence as a string.
-            parameters: A dictionary of parameters to override the BLASTP search settings. The default setting is parameters = {}.
+            experiment_id: A unique identifier for this run. If None, generate one based on timestamp + random number.
+            database_name: The name of the BLAST database to use (default: swissprot).
+            evalue: The E-value threshold for reporting matches.
+            outfmt: The output format.
+            max_target_seqs: The maximum number of aligned sequences to keep.
+            **kwargs: Additional BLASTP arguments to pass directly to the command. Must be valid BLASTP arguments.
 
         Returns:
-            The path to the file containing the BLASTP results.
+            A formatted message with result details.
 
         Raises:
-            ValueError: If the BLASTP command fails.
+            ValueError: If an invalid BLASTP argument is provided in `**kwargs`.
         """
+
+        settings = BLAST_SETTINGS
+        invalid_options = set(kwargs.keys()) - set(BLAST_OPTIONS.keys())
+        effective_evalue = evalue if evalue is not None else settings.evalue
+        effective_outfmt = str(outfmt) if outfmt is not None else str(settings.outfmt)
+        effective_max_target_seqs = (
+            max_target_seqs if max_target_seqs is not None else settings.max_target_seqs
+        )
+        first, *rest = effective_outfmt.split(" ")
+        invalid_outfmt = set({first}) - set(BLAST_OUTPUT_FORMATS.keys())
+        invalid_specifiers = set(rest) - set(BLAST_SPECIFIERS.keys())
+        if any((invalid_options, invalid_outfmt, invalid_specifiers)):
+            raise ValueError("Invalid arguments, please check your inputs")
+
         try:
-            settings = BLAST_SETTINGS
-            settings.trash_dir.mkdir(parents=True, exist_ok=True)
-            fasta_file_path = settings.trash_dir / "query.fasta"
+            settings.cache_dir.mkdir(parents=True, exist_ok=True)
+
+            if experiment_id is None:
+                experiment_id = (
+                    datetime.now().strftime("%Y%m%d_%H%M%S") + f"_{random.randint(1000, 9999)}"
+                )
+
+            experiment_folder = settings.cache_dir / experiment_id
+            experiment_folder.mkdir(parents=True, exist_ok=True)
+
+            fasta_file_path = experiment_folder / "query.fasta"
+            output_file_path = experiment_folder / "blast_output.txt"
+
             with fasta_file_path.open("w") as fasta_file:
                 fasta_file.write(f">query_sequence\n{query}\n")
 
-            effective_settings = settings.model_dump()
-            if parameters:
-                effective_settings.update(parameters)
+            blastdb_path = BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_dir("blast") / "blastdb"
 
-            output_file_path = settings.trash_dir / "blast_output.txt"
-            effective_settings["out"] = output_file_path
+            if database_name is None:
+                database_name = "swissprot"
+            selected_db_path = blastdb_path / database_name
+
+            if not any(
+                selected_db_path.with_suffix(ext).exists() for ext in [".pin", ".psq", ".phr"]
+            ):
+                return f"""
+                Error: BLAST database `{database_name}` not found!
+                
+                Expected location: `{selected_db_path}`
+                
+                To install `{database_name}`, run:
+                ```
+                update_blastdb.pl --decompress {database_name}
+                ```
+                Ensure it is installed in: `{blastdb_path}`
+                """
 
             command: List[Any] = [
                 "blastp",
                 "-query",
                 str(fasta_file_path),
                 "-db",
-                effective_settings["db"],
+                str(selected_db_path),
                 "-evalue",
-                str(effective_settings["evalue"]),
+                str(effective_evalue),
                 "-outfmt",
-                str(effective_settings["outfmt"]),
+                f"{str(effective_outfmt)}",
                 "-max_target_seqs",
-                str(effective_settings["max_target_seqs"]),
+                str(effective_max_target_seqs),
                 "-out",
-                str(effective_settings["out"]),
+                str(output_file_path),
             ]
+
+            for key, value in kwargs.items():
+                command.extend([f"-{key}", str(value)])
 
             result = subprocess.run(command, check=True, capture_output=True, text=True)
             if result.returncode != 0:
-                raise ValueError(
-                    f"BLASTP search failed with exit code {result.returncode}"
+                raise ValueError(f"BLASTP search failed with exit code {result.returncode}")
+
+            columns = [BLAST_SPECIFIERS[key] for key in rest if key in BLAST_SPECIFIERS]
+            if len(columns) > 0:
+                df = pd.read_csv(output_file_path, sep="\t", header=None, names=columns)
+                formatted_results = tabulate(
+                    df,
+                    headers=columns,
+                    tablefmt="pretty",
+                )
+            else:
+                df = pd.read_csv(output_file_path, sep="\t", header=None)
+                formatted_results = tabulate(
+                    df,
+                    tablefmt="pretty",
                 )
 
-            accession_file_path = settings.trash_dir / "hit_accessions.txt"
-            self._extract_accessions(str(output_file_path), str(accession_file_path))
+            return f"""
+            BLASTP Search Completed Successfully!
 
-            sequences_output_file = settings.trash_dir / "full_sequences.fasta"
-            self._fetch_full_sequences(
-                db=str(effective_settings["db"]),
-                accession_file=str(accession_file_path),
-                sequences_output=str(sequences_output_file),
-            )
+            Results saved in: `{experiment_folder}`
+            - Query FASTA File: `{fasta_file_path}`
+            - BLAST Output File: `{output_file_path}`
 
-            merged_output_file = settings.trash_dir / "merged_blastp_results.json"
-            self._merge_hits_and_sequences(
-                blastp_output=str(output_file_path),
-                sequences_output=str(sequences_output_file),
-                merged_output=str(merged_output_file),
-            )
+            Database Used: `{database_name}`
 
-            df = pd.read_json(
-                f"{merged_output_file}", orient="records", lines=True
-            ).to_dict("records")
-            return f"The results have been saved to {merged_output_file}, and here is the data inside the result {df}"
+            Top Matches:
+            {formatted_results}
+
+            Total Matches Found: {len(df)}
+            """
 
         except subprocess.CalledProcessError as e:
             logger.error(f"Error running Blastp: {e.stderr}")
             raise ValueError("Failed to perform BLASTP search") from e
-
-    def _extract_accessions(self, blastp_output: str, accession_file: str):
-        """
-        Extracts hit accessions from BLASTP output using awk.
-
-        Args:
-            blastp_output: Path to the BLASTP output file.
-            accession_file: Path to the file where the extracted accessions will be saved.
-
-        Raises:
-            ValueError: If the extraction fails.
-        """
-        try:
-            awk_command = f"awk '{{print $2}}' {blastp_output} > {accession_file}"
-            subprocess.run(awk_command, shell=True, check=True)
-            logger.info(f"Hit accessions saved to {accession_file}")
-
-        except subprocess.CalledProcessError as e:
-            logger.error(f"Error extracting accessions: {e.stderr}")
-            raise ValueError("Failed to extract hit accessions") from e
-
-    def _fetch_full_sequences(
-        self, db: str, accession_file: str, sequences_output: str
-    ):
-        """
-        Fetches full sequences from the BLAST database using the extracted accessions.
-
-        Args:
-            db: Path to the BLAST database.
-            accession_file: Path to the file with hit accessions.
-            sequences_output: Path to the file where the full sequences will be saved.
-
-        Raises:
-            ValueError: If the sequence fetching fails.
-        """
-        try:
-            blastdbcmd_command = [
-                "blastdbcmd",
-                "-db",
-                db,
-                "-entry_batch",
-                accession_file,
-                "-out",
-                sequences_output,
-            ]
-            subprocess.run(blastdbcmd_command, check=True)
-            logger.info(f"Full sequences saved to {sequences_output}")
-        except subprocess.CalledProcessError as e:
-            logger.error(f"Error fetching full sequences: {e.stderr}")
-            raise ValueError("Failed to fetch full sequences") from e
-
-    def _merge_hits_and_sequences(
-        self, blastp_output: str, sequences_output: str, merged_output: str
-    ):
-        """
-        Merge BLASTP hits and full sequences and descriptions into a single file.
-
-        Args:
-            blastp_output: Path to the BLASTP output file (tabular format).
-            sequences_output: Path to the full sequences file (FASTA format).
-            merged_output: Path to the file where the merged results will be saved.
-        """
-        try:
-            blastp_df = pd.read_csv(blastp_output, sep="\t", header=None)
-            blastp_df.columns = [
-                "query",
-                "subject",
-                "perc_identity",
-                "alignment_length",
-                "mismatches",
-                "gap_opens",
-                "q_start",
-                "q_end",
-                "s_start",
-                "s_end",
-                "evalue",
-                "bit_score",
-            ]
-
-            sequences_dict = {
-                record.id: str(record.seq)
-                for record in SeqIO.parse(sequences_output, "fasta")
-            }
-            descriptions_dict = {
-                record.id: str(record.description)
-                for record in SeqIO.parse(sequences_output, "fasta")
-            }
-
-            blastp_df["sequence"] = blastp_df["subject"].map(sequences_dict)
-            blastp_df["description"] = blastp_df["subject"].map(descriptions_dict)
-
-            blastp_df.to_json(merged_output, orient="records", lines=True)
-            logger.info(f"Merged results saved to {merged_output}")
-        except Exception as e:
-            logger.error(f"Error merging hits and sequences: {e}")
-            raise ValueError("Failed to merge BLASTP hits and sequences") from e
 
     async def _arun(self, *args, **kwargs) -> str:
         """Async method for blastp."""

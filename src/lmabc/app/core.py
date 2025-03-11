@@ -1,28 +1,26 @@
+#
+# MIT License
+#
+# Copyright (c) 2025 GT4SD team
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.#
 """Streamlit App."""
-
-__copyright__ = """
-MIT License
-
-Copyright (c) 2024 GT4SD team
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-"""
 
 import base64
 import json
@@ -32,6 +30,7 @@ import streamlit as st
 from examples_config import TOOL_EXAMPLES
 from importlib_resources import files
 from langchain_community.callbacks import StreamlitCallbackHandler
+from tool_descriptions import TOOL_DESCRIPTIONS
 
 from lmabc.core import BiocatalysisAssistant
 
@@ -42,8 +41,11 @@ PROVIDER_MODELS: Dict[str, List[str]] = {
         "mistralai/Mistral-7B-Instruct-v0.2",
     ],
     "watsonx": [
-        "meta-llama/llama-3-1-70b-instruct",
-        "meta-llama/llama-3-8b-instruct",
+        "ibm/granite-3-2-8b-instruct",
+        "ibm/granite-3-8b-instruct",
+        "mistralai/mistral-large",
+        "meta-llama/llama-3-3-70b-instruct",
+        "meta-llama/llama-3-1-8b-instruct",
     ],
     "openai": ["gpt-4-0125-preview", "gpt-4", "gpt-3.5-turbo"],
     "anthropic": [
@@ -56,7 +58,7 @@ PROVIDER_MODELS: Dict[str, List[str]] = {
 }
 
 st.set_page_config(
-    page_title="Biocatalysis assistant: an LM agent for biocatalysis",
+    page_title="Biocatalysis Assistant: An LM Agent for biocatalysis",
     page_icon="🧪",
     layout="wide",
 )
@@ -104,26 +106,6 @@ def get_local_img(file_name: str) -> str:
         return ""
 
 
-tool_descriptions = {
-    "**GetElementsOfReaction**": """Parses reaction SMILES to extract specific reactants, amino acid sequences, and products. This tool is essential for deconstructing complex biochemical reactions, allowing for detailed analysis of individual components.
-    """,
-    "**ExtractBindingSites**": """Utilizes [RXNAAMapper](https://doi.org/10.1016/j.csbj.2024.04.012) to extract binding sites from reaction SMILES strings. This tool is crucial for understanding enzyme functionality, as it identifies key sites that can be targeted for mutations to enhance catalytic activity or optimize user-specified fitness functions.
-    """,
-    "**OptimizeEnzymeSequences**": """Optimizes enzyme sequences for biocatalytic reactions using [Enzeptional](https://chemrxiv.org/engage/chemrxiv/article-details/65f0746b9138d23161510400). This powerful tool supports multiple optimization iterations based on substrate and product SMILES, featuring customizable scoring models and interval-specific mutations. It employs Genetic Algorithms to explore the vast sequence space and identify promising enzyme variants with improved catalytic properties. The tool outputs a ranked list of optimized sequences for experimental validation, significantly accelerating the enzyme engineering process.
-    """,
-    "**Blastp**": """Performs BLASTP (Basic Local Alignment Search Tool for Proteins) searches to identify protein sequences similar to a given query using [NCBI](https://www.ncbi.nlm.nih.gov). This tool allows customization of key parameters and generates comprehensive output including aligned sequences, descriptions, and statistical data, facilitating detailed protein homology and function analysis. By leveraging the vast NCBI database, it enables researchers to discover evolutionarily related proteins, predict functional similarities, and identify conserved domains. The results can guide further experimental investigations and provide insights into protein structure-function relationships.
-    """,
-    "**FindPDBStructure**": """Finds and retrieves [PDB](https://www.rcsb.org) structures based on a query using the [RCSB python package](https://rcsbsearchapi.readthedocs.io/en/latest/).
-    """,
-    "**DownloadPDBStructure**": """Downloads specific PDB structures based on a PDB code using the [RCSB Search API](https://search.rcsb.org). This tool complements the FindPDBStructure functionality by allowing direct retrieval of identified structures.
-    """,
-    "**Mutagenesis**": """Employs [PyMOL](https://www.pymol.org) to perform targeted mutations on protein structures, enabling the transformation of a protein structure to match a specified target sequence. It can optionally perform additional analyses like RMSD (Root Mean Square Deviation) calculations to assess structural changes. This tool can be used for predicting the structural consequences of amino acid substitutions, allowing researchers to visualize potential changes in protein conformation and stability. By integrating with PyMOL's powerful visualization capabilities, it provides both quantitative and qualitative insights into the effects of mutations on protein structure and function.
-    """,
-    "**MDSimulation**": """Facilitates Molecular Dynamics simulations using [GROMACS](https://www.gromacs.org). This tool automates the setup and execution of standard MD simulation stages, including Minimization, NVT (constant Number, Volume, Temperature) equilibration, and NPT (constant Number, Pressure, Temperature) equilibration.
-    """,
-}
-
-
 def create_expanded_card(title: str, description: str):
     """
     Create expandable card for tool description.
@@ -140,26 +122,41 @@ def create_expanded_card(title: str, description: str):
 def tools_page() -> None:
     """Initialize and display the Tools page."""
     st.title("🛠️ Tools")
-    st.write(
-        "Explore our powerful set of tools to supercharge your biocatalysis research!"
-    )
+    st.write("Explore our powerful set of tools to supercharge your biocatalysis research!")
 
     available_tools = []
     if "agent" in st.session_state and st.session_state.agent:
         available_tools = [tool.name for tool in st.session_state.agent.tools]
 
-    cols = st.columns(4)
+    for tool_name, description in TOOL_DESCRIPTIONS.items():
+        tool_name_clean = tool_name.strip("*").strip()
+        is_available = any(tool_name_clean in tool for tool in available_tools)
 
-    for i, (tool_name, description) in enumerate(tool_descriptions.items()):
-        with cols[i % 4]:
-            tool_name_clean = tool_name.strip("*").strip()
-            is_available = any(tool_name_clean in tool for tool in available_tools)
+        border_color = "green" if is_available else "red"
+        bg_color = "#d4edda" if is_available else "#f8d7da"
 
-            expanded = st.expander(tool_name, expanded=False)
-            with expanded:
-                if not is_available:
-                    st.warning("⚠️ Tool currently unavailable", icon="⚠️")
-                st.write(description)
+        description_parts = description.split("\n\n")
+        main_desc = description_parts[0]
+        extra_desc = "\n\n".join(description_parts[1:]) if len(description_parts) > 1 else ""
+
+        warning_msg = "⚠️ Tool currently unavailable" if not is_available else ""
+
+        st.markdown(
+            f"""
+            <div style='border: 2px solid {border_color}; background-color: {bg_color}; padding: 10px; border-radius: 10px; margin-bottom: 15px;'>
+                <h3>{tool_name_clean}</h3>
+                <p style='color: red;'>{warning_msg}</p>
+                <hr/>
+                <strong>Description</strong>
+                <p>{main_desc}</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        if extra_desc:
+            with st.expander("📖 Read More", expanded=False):
+                st.markdown(extra_desc)
 
 
 def get_chat_message(contents: str = "", align: str = "left") -> str:
@@ -253,9 +250,7 @@ def sidebar() -> None:
 
         st.markdown("---")
         st.subheader("📚 Github")
-        st.markdown(
-            "[🔗 View Source Code](https://github.com/GT4SD/lm-assistant-for-biocatalysis)"
-        )
+        st.markdown("[🔗 View Source Code](https://github.com/GT4SD/lm-assistant-for-biocatalysis)")
 
         st.markdown("---")
         st.subheader("📄 Citation")
@@ -282,9 +277,7 @@ def docs_page() -> None:
 
 def try_example(example_input: str) -> None:
     """Handle 'Try it!' button click."""
-    st.session_state.previous_memory_state = getattr(
-        st.session_state, "use_memory", True
-    )
+    st.session_state.previous_memory_state = getattr(st.session_state, "use_memory", True)
 
     st.session_state.use_memory = False
 
@@ -300,9 +293,7 @@ def render_tool_example(example: dict) -> None:
     with st.expander("Show details", expanded=False):
         st.markdown("#### Example Input")
         st.code(example["example_input"], language="python")
-        if st.button(
-            "🚀 Try this example!", key=f"try_{example['id']}", type="primary"
-        ):
+        if st.button("🚀 Try this example!", key=f"try_{example['id']}", type="primary"):
             try_example(example["example_input"])
 
 
@@ -318,9 +309,10 @@ def handle_example_execution():
 
             response = temp_agent.invoke({"input": st.session_state.current_example})
             if response:
-                st.session_state.messages.append(
-                    {"role": "assistant", "content": response["output"]}
-                )
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": response["output"],
+                })
 
             st.session_state.use_memory = st.session_state.previous_memory_state
             st.session_state.executing_example = False
@@ -359,9 +351,7 @@ def display_chat_messages() -> None:
     """Display chat messages in the UI."""
     for message in st.session_state.messages:
         st.markdown(
-            get_chat_message(
-                message["content"], "right" if message["role"] == "user" else "left"
-            ),
+            get_chat_message(message["content"], "right" if message["role"] == "user" else "left"),
             unsafe_allow_html=True,
         )
 
@@ -383,9 +373,7 @@ def handle_user_input() -> None:
                     {"input": prompt},
                     {
                         "callbacks": (
-                            [streamlit_handler]
-                            if st.session_state.stream_output
-                            else None
+                            [streamlit_handler] if st.session_state.stream_output else None
                         )
                     },
                 )
@@ -394,28 +382,20 @@ def handle_user_input() -> None:
                 if isinstance(full_response, list):
                     full_response = " ".join(full_response)
 
-                st.markdown(
-                    get_chat_message(full_response, "left"), unsafe_allow_html=True
-                )
-                st.session_state.messages.append(
-                    {"role": "assistant", "content": full_response}
-                )
+                st.markdown(get_chat_message(full_response, "left"), unsafe_allow_html=True)
+                st.session_state.messages.append({"role": "assistant", "content": full_response})
 
             except Exception as e:
                 error_message = f"An error occurred: {str(e)}"
-                st.markdown(
-                    get_chat_message(error_message, "left"), unsafe_allow_html=True
-                )
-                st.session_state.messages.append(
-                    {"role": "assistant", "content": error_message}
-                )
+                st.markdown(get_chat_message(error_message, "left"), unsafe_allow_html=True)
+                st.session_state.messages.append({"role": "assistant", "content": error_message})
 
 
 def home_page() -> None:
     """Initialize and display the Home page."""
     st.title("Language Model Assistant for Biocatalysis (LM-ABC)")
     st.write(
-        "Welcome to your hub for innovative biocatalysis solutions—explore, analyze, and optimize with ease."
+        "Welcome to your hub for innovative biocatalysis solutions where you can explore, analyze and optimize with ease."
     )
 
     handle_example_execution()
@@ -449,9 +429,7 @@ def settings_page() -> None:
         index=list(PROVIDER_MODELS.keys()).index(current_provider),
     )
 
-    provider = (
-        selected_provider if selected_provider is not None else get_default_provider()
-    )
+    provider = selected_provider if selected_provider is not None else get_default_provider()
     st.session_state.selected_provider = provider
 
     current_model = cast(
@@ -470,18 +448,14 @@ def settings_page() -> None:
         index=PROVIDER_MODELS[provider].index(current_model),
     )
 
-    model = (
-        selected_model if selected_model is not None else get_default_model(provider)
-    )
+    model = selected_model if selected_model is not None else get_default_model(provider)
     st.session_state.selected_model = model
 
     st.session_state.stream_output = st.checkbox(
         "🌊 Stream Output", value=st.session_state.stream_output
     )
 
-    st.session_state.use_memory = st.checkbox(
-        "🧠 Use Memory", value=st.session_state.use_memory
-    )
+    st.session_state.use_memory = st.checkbox("🧠 Use Memory", value=st.session_state.use_memory)
 
     additional_settings = st.text_area("🔧Additional Settings (JSON)")
 
@@ -502,9 +476,7 @@ def settings_page() -> None:
                     use_memory=st.session_state.use_memory,
                     **additional_params,
                 )
-                st.session_state.sessions[st.session_state.current_session][
-                    "agent"
-                ] = new_agent
+                st.session_state.sessions[st.session_state.current_session]["agent"] = new_agent
                 st.session_state.agent = new_agent
                 st.success("✅ Settings saved successfully!")
             except Exception as e:

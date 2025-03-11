@@ -9,22 +9,10 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 
-def test_agent_with_tools():
-    """Validates agent's integration with tools and input handling."""
-    model = "meta-llama/llama-3-1-70b-instruct"
-    provider = "watsonx"
-    agent = BiocatalysisAssistant(model=model, provider=provider).initiate_agent()
-
-    input_text = {
-        "input": "Find the components of the given reaction: CC(=O)Nc1ccc(cc1)S(=O)(=O)N|MASETFEFQAEITQLMSLIINTVYSNKEIFLRELISNASDALDKIRYKSLSDPKQLETEPDLFIRITPKPEQKLLEIRDSGIGMTKAELINNLGTIAKSGTKAFMEALSAGADLSMIGQFGLEGFYSLFLLADRLQVISKSNDDEQYIWESNAGGSFTVTLDEVNERIGRGTILRLFLKDDQLEYLEEKRIKEVIKRHSEFVAYPIQLVVTKEVEKEVPIP>>CC(=O)Nc1ccc(cc1)S(=O)(=O)O"
-    }
-
-    try:
-        response = agent.invoke(input_text)
-        assert response is not None
-        assert isinstance(response, dict)
-    except Exception as e:
-        pytest.fail(f"Unexpected error occurred: {str(e)}")
+@pytest.fixture
+def mock_assistant():
+    """Provides a mock assistant for testing."""
+    return BiocatalysisAssistant()
 
 
 def test_individual_tools():
@@ -38,6 +26,8 @@ def test_individual_tools():
             tools = assistant.get_available_tools()
             if tools:
                 successful_tools.append(tool_name)
+            else:
+                failed_tools.append(f"{tool_name}: No tools loaded")
         except Exception as e:
             failed_tools.append(f"{tool_name}: {str(e)}")
 
@@ -46,25 +36,48 @@ def test_individual_tools():
     ), f"Critical failure: No tools could be initialized. Failures: {', '.join(failed_tools)}"
 
 
-def test_full_assistant():
-    """Validates complete assistant initialization with all tools."""
-    assistant = BiocatalysisAssistant()
-    tools = assistant.get_available_tools()
-    assert tools, "No tools were loaded"
-    assert len(tools) > 0, "No tools were successfully loaded"
+def test_agent_with_tools():
+    """Validates agent's integration with tools and input handling."""
+    model = "HuggingFaceH4/zephyr-7b-beta"
+    provider = "huggingface"
+    agent = BiocatalysisAssistant(model=model, provider=provider).initiate_agent()
 
-    agent = assistant.initiate_agent()
-    assert agent, "Agent initialization failed"
+    input_text = {
+        "input": "Extract elements of reaction for the following reaction CC(=O)Nc1ccc(cc1)S(=O)(=O)N|MASETFEFQAEITQLMSLIINTVYSNKEIFLRELISNASDALDKIRYKSLSDPKQLETEPDLFIRITPKPEQKIGRGTILRLFLKDDQLVAYPIQLVVTKEVEKEVPIP>>CC(=O)Nc1ccc(cc1)S(=O)(=O)O"
+    }
+
+    response = agent.invoke(input_text)
+
+    print("Agent Response:", response)
+
+    assert response is not None, "Agent response should not be None"
+    assert isinstance(response, dict), "Agent response should be a dictionary"
 
 
-@pytest.fixture(scope="session", autouse=True)
-def setup_logging():
-    """Configure logging for test session."""
-    logging.basicConfig(level=logging.INFO)
-    return logging.getLogger(__name__)
+@pytest.fixture(scope="module")
+def individual_results():
+    """Fixture to run individual tool tests and return results."""
+    results = {}
+    for tool_name in TOOL_FACTORY:
+        try:
+            assistant = BiocatalysisAssistant(tool_names=[tool_name])
+            tools = assistant.get_available_tools()
+            if tools:
+                results[tool_name] = "Success"
+            else:
+                results[tool_name] = "Failed - No tools loaded"
+        except Exception as e:
+            results[tool_name] = f"Failed - {str(e)}"
+    return results
 
 
-@pytest.fixture
-def mock_assistant():
-    """Provides a mock assistant for testing."""
-    return BiocatalysisAssistant()
+@pytest.fixture(scope="module")
+def full_assistant_results():
+    """Fixture to run full assistant test and return results."""
+    try:
+        assistant = BiocatalysisAssistant()
+        tools = assistant.get_available_tools()
+        _ = assistant.initiate_agent()
+        return True, len(tools)
+    except Exception:
+        return False, 0

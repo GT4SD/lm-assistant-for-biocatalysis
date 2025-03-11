@@ -1,35 +1,35 @@
+#
+# MIT License
+#
+# Copyright (c) 2025 GT4SD team
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.#
 """Enhanced MD Simulations tools and utilities."""
 
-__copyright__ = """
-MIT License
-
-Copyright (c) 2024 GT4SD team
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-"""
-
 import logging
+import random
 import subprocess
 import tempfile
 from abc import ABC, abstractmethod
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -45,49 +45,50 @@ class SimulationConfiguration(BaseSettings):
     """Configuration values for the MDSimulation tool."""
 
     tool_dir: Path = Field(
-        default_factory=lambda: BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path(
-            "molecular_dynamics"
-        ),
+        default_factory=lambda: BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_dir("molecular_dynamics"),
         description="Root directory for simulations.",
     )
-    simulations_dir: Path = Field(
+    gromacs_path: Path = Field(
+        default=Path("/usr/local/gromacs/bin/gmx"),
+        description="Path to GROMACS. Can be set via the 'GROMACS_PATH' environment variable.",
+    )
+    cache_dir: Path = Field(
         default_factory=lambda: Path(
-            BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("molecular_dynamics")
-        )
-        / "simulations",
-        description="Simulations directory.",
+            BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_cache_dir("molecular_dynamics")
+        ),
+        description="Cache directory.",
     )
     minimization_dir: Path = Field(
         default_factory=lambda: Path(
-            BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("molecular_dynamics")
+            BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_dir("molecular_dynamics")
         )
         / "simulations/minimization",
         description="Minimization directory.",
     )
     nvt_dir: Path = Field(
         default_factory=lambda: Path(
-            BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("molecular_dynamics")
+            BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_dir("molecular_dynamics")
         )
         / "simulations/nvt",
         description="NVT directory.",
     )
     npt_dir: Path = Field(
         default_factory=lambda: Path(
-            BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("molecular_dynamics")
+            BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_dir("molecular_dynamics")
         )
         / "simulations/npt",
         description="NPT directory.",
     )
     mdp_dir: Path = Field(
         default_factory=lambda: Path(
-            BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("molecular_dynamics")
+            BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_dir("molecular_dynamics")
         )
         / "mdp_files",
         description="MDP files directory.",
     )
     run_dir: Path = Field(
         default_factory=lambda: Path(
-            BIOCATALYSIS_AGENT_CONFIGURATION.get_tools_cache_path("molecular_dynamics")
+            BIOCATALYSIS_AGENT_CONFIGURATION.get_tool_dir("molecular_dynamics")
         )
         / "run_files",
         description="Shell script files directory.",
@@ -140,7 +141,8 @@ To run the MDSimulation Tool, the user prepares a PDB file (protein structure) a
 Example Usage:
 # Running MD simulation starting with minimization, followed by NVT and NPT equilibration
 (
-    protein_strcuture.pdb,
+    protein_strcuture.pdb,                  # Full pdb path!
+    experiment_id,                          #  A unique identifier for this run (optional). If not provided to not pass this argument.
     stages=['minimization', 'nvt', 'npt'],  # Running the three stages sequentially, Default is ['minimization]
     minimization={'nsteps': 100},            # Modifying the 'nsteps' parameter for minimization stage. Default is {}.
     nvt={'nsteps': 5000},            # Modifying the 'nsteps' parameter for nvt stage. Default is {}.
@@ -228,9 +230,7 @@ class MDPFileUpdater:
 class SimulationStage(ABC):
     """Abstract base class for simulation stages."""
 
-    def __init__(
-        self, config: Dict[str, Any], stage_name: str, mdp_updater: MDPFileUpdater
-    ):
+    def __init__(self, config: Dict[str, Any], stage_name: str, mdp_updater: MDPFileUpdater):
         """
         Initialize simulation stages.
 
@@ -244,12 +244,13 @@ class SimulationStage(ABC):
         self.mdp_updater = mdp_updater
 
     @abstractmethod
-    def run(self, input_file: Path, **kwargs) -> Path:
+    def run(self, input_file: Path, output_dir: Path, **kwargs) -> Path:
         """
         Run the simulation stage.
 
         Args:
             input_file: Path to the input file.
+            output_dir: Output directory.
 
         Returns:
             Path to the output file.
@@ -273,12 +274,13 @@ class SimulationStage(ABC):
 class GenericSimulationStage(SimulationStage):
     """Generic simulation stage that can be used for minimization, NVT, and NPT."""
 
-    def run(self, input_file: Path, **kwargs) -> Path:
+    def run(self, input_file: Path, output_dir: Path, **kwargs) -> Path:
         """
         Run the simulation stage.
 
         Args:
             input_file: Path to the input file.
+            output_dir: Directory where the output for this stage will be stored.
 
         Returns:
             Path to the output file.
@@ -290,15 +292,14 @@ class GenericSimulationStage(SimulationStage):
         else:
             mdp_file = SIMULATION_SETTINGS.get_mdp_path(self.stage_name)
 
-        output_dir = getattr(SIMULATION_SETTINGS, f"{self.stage_name}_dir")
-
         subprocess.run(
             [
                 "bash",
-                SIMULATION_SETTINGS.get_sh_path(self.stage_name),
+                str(SIMULATION_SETTINGS.get_sh_path(self.stage_name)),
                 str(input_file),
                 str(output_dir),
                 str(mdp_file),
+                str(SIMULATION_SETTINGS.gromacs_path),
             ],
             check=True,
         )
@@ -328,7 +329,7 @@ class MDSimulation(BiocatalysisAssistantBaseTool):
                 SIMULATION_SETTINGS.tool_dir,
                 SIMULATION_SETTINGS.mdp_dir,
                 SIMULATION_SETTINGS.run_dir,
-                SIMULATION_SETTINGS.simulations_dir,
+                SIMULATION_SETTINGS.cache_dir,
                 SIMULATION_SETTINGS.minimization_dir,
                 SIMULATION_SETTINGS.nvt_dir,
                 SIMULATION_SETTINGS.npt_dir,
@@ -345,7 +346,13 @@ class MDSimulation(BiocatalysisAssistantBaseTool):
                     raise FileNotFoundError(f"Shell script {sh_file} not found.")
 
             try:
-                subprocess.run(["gmx", "--version"], check=True, capture_output=True)
+                if not SIMULATION_SETTINGS.gromacs_path.exists():
+                    logger.error(
+                        f"GROMACS executable not found at {SIMULATION_SETTINGS.gromacs_path}"
+                    )
+                subprocess.run(
+                    [SIMULATION_SETTINGS.gromacs_path, "--version"], check=True, capture_output=True
+                )
                 from pymol import cmd
 
                 _ = cmd
@@ -361,21 +368,28 @@ class MDSimulation(BiocatalysisAssistantBaseTool):
     @staticmethod
     def preprocess_structure(input_file: Path) -> Path:
         """
-        Remove water, ligands, and other non-protein molecules from the input structure.
+        Select only the protein (polymer.protein) from the input structure
+        and save it to a new PDB file.
 
         Args:
             input_file: Path to the input PDB file.
 
         Returns:
-            Path to the preprocessed PDB file.
+            Path to the preprocessed (protein-only) PDB file.
         """
+        from pathlib import Path
+
         from pymol import cmd
 
-        output_file = input_file.parent / f"{input_file.stem}_protein_only.pdb"
+        input_path = Path(input_file)
+        output_file = input_path.parent / f"{input_path.stem}_protein_only.pdb"
 
         cmd.load(str(input_file), "structure")
-        cmd.remove("not polymer")
-        cmd.save(str(output_file), "structure")
+
+        cmd.select("protein", "polymer.protein")
+
+        cmd.save(str(output_file), "protein")
+
         cmd.delete("all")
 
         return output_file
@@ -384,6 +398,7 @@ class MDSimulation(BiocatalysisAssistantBaseTool):
         self,
         pdb_file: Path,
         stages: List[str] = ["minimization", "nvt", "npt"],
+        experiment_id: Optional[str] = None,
         **kwargs,
     ) -> str:
         """
@@ -392,6 +407,7 @@ class MDSimulation(BiocatalysisAssistantBaseTool):
         Args:
             pdb_file: Path to the input PDB file.
             stages: List of simulation stages to run.
+            experiment_id: A unique identifier for this run. If None, generate one based on timestamp + random number.
 
         Returns:
             String describing the simulation outcome.
@@ -403,11 +419,24 @@ class MDSimulation(BiocatalysisAssistantBaseTool):
             preprocessed_file = self.preprocess_structure(pdb_file)
             input_file = preprocessed_file
 
+            if experiment_id is None:
+                experiment_id = (
+                    datetime.now().strftime("%Y%m%d_%H%M%S") + f"_{random.randint(1000, 9999)}"
+                )
+
+            experiment_folder = SIMULATION_SETTINGS.cache_dir / experiment_id
+            experiment_folder.mkdir(parents=True, exist_ok=True)
+
             for stage_name in stages:
+                stage_output_dir = experiment_folder / stage_name
+                stage_output_dir.mkdir(parents=True, exist_ok=True)
+
                 stage = GenericSimulationStage(
                     kwargs.get(stage_name, {}), stage_name, MDPFileUpdater()
                 )
-                input_file = stage.run(input_file, **kwargs.get(stage_name, {}))
+                input_file = stage.run(
+                    input_file, output_dir=stage_output_dir, **kwargs.get(stage_name, {})
+                )
 
             return f"MD simulation completed successfully. Final output: {input_file}"
 

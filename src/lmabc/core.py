@@ -1,29 +1,26 @@
+#
+# MIT License
+#
+# Copyright (c) 2025 GT4SD team
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.#
 """Biocatalysis Assistant Module."""
-
-__copyright__ = """
-MIT License
-
-Copyright (c) 2024 GT4SD team
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-"""
-
 
 import logging
 from typing import Any, Dict, List, Optional, Type, Union
@@ -49,9 +46,7 @@ logger.addHandler(logging.NullHandler())
 class Settings(BaseSettings):
     """Configuration settings."""
 
-    model_config = SettingsConfigDict(
-        env_file=".env", extra="allow", case_sensitive=False
-    )
+    model_config = SettingsConfigDict(env_file=".env", extra="allow", case_sensitive=False)
 
 
 settings = Settings()
@@ -81,6 +76,7 @@ class BiocatalysisAssistant:
         model: str = "HuggingFaceH4/zephyr-7b-beta",
         provider: str = "huggingface",
         use_memory: bool = True,
+        verbose: bool = False,
         model_kwargs: Optional[Dict[str, Any]] = None,
     ):
         """Initialize an agent with a dynamic set of tools."""
@@ -88,11 +84,10 @@ class BiocatalysisAssistant:
         self.model = model
         self.provider = provider
         self.use_memory = use_memory
+        self.verbose = verbose
         self.model_kwargs = model_kwargs
 
-        logger.info(
-            f"Initializing BiocatalysisAssistant with model={model}, provider={provider}"
-        )
+        logger.info(f"Initializing BiocatalysisAssistant with model={model}, provider={provider}")
 
         tool_names = list(TOOL_FACTORY.keys()) if tool_names is None else tool_names
         logger.info(f"Attempting to load the following tools: {tool_names}")
@@ -103,9 +98,7 @@ class BiocatalysisAssistant:
         for tool_name in tool_names:
             try:
                 if tool_name not in TOOL_FACTORY:
-                    raise ValueError(
-                        f"Tool '{tool_name}' is not available in the tool factory."
-                    )
+                    raise ValueError(f"Tool '{tool_name}' is not available in the tool factory.")
 
                 logger.debug(f"Attempting to instantiate {tool_name}")
                 tool_class = TOOL_FACTORY[tool_name]
@@ -123,9 +116,7 @@ class BiocatalysisAssistant:
 
             except Exception as e:
                 failed_tools.append(tool_name)
-                logger.error(
-                    f"Error instantiating {tool_name}: {str(e)}", exc_info=True
-                )
+                logger.error(f"Error instantiating {tool_name}: {str(e)}", exc_info=True)
 
         if successful_tools:
             logger.info(f"Successfully loaded tools: {successful_tools}")
@@ -151,7 +142,7 @@ class BiocatalysisAssistant:
 
         try:
             agent = create_agent(
-                tools=self.tool_list, llm=llm, use_memory=self.use_memory
+                tools=self.tool_list, llm=llm, use_memory=self.use_memory, verbose=self.verbose
             )
             logger.info("Successfully created agent")
             return agent

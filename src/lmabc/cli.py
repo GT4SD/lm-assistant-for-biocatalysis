@@ -1,28 +1,26 @@
+#
+# MIT License
+#
+# Copyright (c) 2025 GT4SD team
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.#
 """Biocatalysis Assistant CLI."""
-
-__copyright__ = """
-MIT License
-
-Copyright (c) 2024 GT4SD team
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-"""
 
 import importlib.metadata
 import os
@@ -90,11 +88,7 @@ researchers.{Style.RESET_ALL}
     print(textwrap.dedent(description))
 
     print(INFO_COLOR + "Type 'exit' to quit, 'help' for commands." + Style.RESET_ALL)
-    print(
-        INFO_COLOR
-        + "Before starting please set up the following parameters:"
-        + Style.RESET_ALL
-    )
+    print(INFO_COLOR + "Before starting please set up the following parameters:" + Style.RESET_ALL)
 
 
 def clear_screen():
@@ -135,12 +129,7 @@ def get_verbosity():
         elif verbosity == "f":
             return False
         else:
-            print(
-                "\n"
-                + ERROR_COLOR
-                + "Invalid input. Please try again."
-                + Style.RESET_ALL
-            )
+            print("\n" + ERROR_COLOR + "Invalid input. Please try again." + Style.RESET_ALL)
 
 
 def get_model_and_provider(default_model, default_provider):
@@ -169,9 +158,7 @@ def get_model_and_provider(default_model, default_provider):
             new_model, new_provider = choice.split()
             return new_model, new_provider
         except ValueError:
-            print(
-                ERROR_COLOR + "Invalid input. Using default settings." + Style.RESET_ALL
-            )
+            print(ERROR_COLOR + "Invalid input. Using default settings." + Style.RESET_ALL)
             return default_model, default_provider
 
 
@@ -185,7 +172,7 @@ def print_help():
     allowing users to ask questions and receive responses related to biocatalysis.
 
 {Fore.CYAN}USAGE:{Style.RESET_ALL}
-    python biocatalysis_cli.py
+        lmabc
 
 {Fore.CYAN}INITIAL SETUP:{Style.RESET_ALL}
     Upon starting, you will be prompted to:
@@ -220,11 +207,7 @@ def print_version():
     """Display the version information of the Biocatalysis Assistant CLI."""
     try:
         version = importlib.metadata.version("lmabc")
-        print(
-            INFO_COLOR
-            + f"Biocatalysis Assistant CLI Version {version}"
-            + Style.RESET_ALL
-        )
+        print(INFO_COLOR + f"Biocatalysis Assistant CLI Version {version}" + Style.RESET_ALL)
     except importlib.metadata.PackageNotFoundError:
         print(INFO_COLOR + "Version information could not be found." + Style.RESET_ALL)
 
@@ -249,13 +232,9 @@ def main():
 
     verbose = get_verbosity()
 
-    model, provider = get_model_and_provider(
-        settings.default_model, settings.default_provider
-    )
+    model, provider = get_model_and_provider(settings.default_model, settings.default_provider)
 
-    print(
-        HIGHLIGHT_COLOR + "\nInitializing Biocatalysis Assistant..." + Style.RESET_ALL
-    )
+    print(HIGHLIGHT_COLOR + "\nInitializing Biocatalysis Assistant..." + Style.RESET_ALL)
     agent = BiocatalysisAssistant(model=model, provider=provider).initiate_agent()
     agent.verbose = verbose
 
